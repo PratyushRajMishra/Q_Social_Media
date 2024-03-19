@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "938455911566",
+    "project_id": "qsocialmedia-b446b",
+    "storage_bucket": "qsocialmedia-b446b.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:938455911566:android:1c999cc227fb447d0d8ddf",
+        "android_client_info": {
+          "package_name": "com.example.q"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAARSeuIV0GupST762tlAJPiym_q4HmAyw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
