@@ -8,6 +8,7 @@ import 'package:q/screens/auth/dashBoard.dart';
 import 'package:q/screens/bottom_NavBar.dart';
 import 'package:q/theme/dark_theme.dart';
 import 'package:q/theme/theme_manager.dart';
+import 'models/customCircularProgress.dart';
 import 'models/userModel.dart';
 import 'models/FirebaseHelper.dart';
 
@@ -61,7 +62,7 @@ class MyApp extends StatelessWidget {
                   if (userSnapshot.connectionState == ConnectionState.waiting) {
                     return Scaffold(
                       body: Center(
-                        child: CircularProgressIndicator(),
+                        child: CustomCircularProgressIndicator(imagePath: 'assets/logo_dark.png',  size: 120.0, darkModeImagePath: 'assets/logo_light.png',),
                       ),
                     );
                   } else if (userSnapshot.hasError) {

@@ -75,17 +75,22 @@ class _PostPageState extends State<PostPage> {
       body: Column(
         children: [
           ListTile(
-            leading: ClipRRect(
-              borderRadius: BorderRadius.circular(100.0),
-              child: CachedNetworkImage(
-                imageUrl: _user!.photoURL.toString(),
-                width: 40, // Set the desired width
-                height: 40, // Set the desired height
-                fit: BoxFit.cover, // Adjust the fit as per your requirement
-                errorWidget: (context, url, error) => CircleAvatar(
-                  child: Icon(CupertinoIcons.person),
+            leading: CircleAvatar(
+              radius: 10,
+              backgroundColor: Colors.transparent, // Match with the background color
+              child: _user?.photoURL != null // Check if user has a photoURL
+                  ? ClipRRect(
+                borderRadius: BorderRadius.circular(100.0),
+                child: CachedNetworkImage(
+                  imageUrl: _user!.photoURL!,
+                  width: 40, // Set the desired width
+                  height: 40, // Set the desired height
+                  fit: BoxFit.cover, // Adjust the fit as per your requirement
+                  placeholder: (context, url) => CircularProgressIndicator(), // Placeholder widget while loading
+                  errorWidget: (context, url, error) => Icon(Icons.error), // Error widget if image fails to load
                 ),
-              ),
+              )
+                  : Icon(Icons.account_circle, size: 40, color: Theme.of(context).colorScheme.tertiary,), // Display an icon if no photoURL is available
             ),
             title: askingQuestion
                 ? _buildAskQuestionWidget()
