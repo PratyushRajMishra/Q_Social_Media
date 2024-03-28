@@ -22,7 +22,7 @@ class HomePage extends StatelessWidget {
           onTap: () {
             Navigator.push(
               context,
-              CupertinoPageRoute(builder: (context) => const ProfilePage()),
+              CupertinoPageRoute(builder: (context) => ProfilePage()),
             );
           },
           child: Padding(

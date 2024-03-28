@@ -33,7 +33,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _dobController = TextEditingController();
     _locationController = TextEditingController();
     _websiteController = TextEditingController();
-    WidgetsBinding.instance!.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchUserData();
     });
   }
@@ -265,7 +265,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   TextField(
                     controller: _bioController,
                     decoration: InputDecoration(labelText: 'Bio'),
-                    maxLines: null,
+                    maxLength: 100,
                     onChanged: (value) => _handleTextChanges(),
                   ),
                   const SizedBox(height: 20),
@@ -277,6 +277,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
                   const SizedBox(height: 20),
                   TextField(
+                    maxLength: 20,
                     controller: _locationController,
                     decoration: InputDecoration(labelText: 'Location'),
                     onChanged: (value) => _handleTextChanges(),
