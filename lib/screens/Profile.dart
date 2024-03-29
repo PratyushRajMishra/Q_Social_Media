@@ -152,13 +152,7 @@ class _ProfilePageState extends State<ProfilePage> {
         elevation: 0,
         leading: BackButton(
           onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => BottomNavbarPage(
-                    userModel: UserModel(phoneNumber: '', name: '')),
-              ),
-            );
+            Navigator.pop(context);
           },
         ),
         actions: [

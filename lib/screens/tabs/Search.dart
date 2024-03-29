@@ -1,10 +1,15 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:q/screens/target_profile.dart';
 
 import '../Profile.dart';
 import '../Setting.dart';
+
+
+
 
 class SearchPage extends StatefulWidget {
   const SearchPage({Key? key}) : super(key: key);
@@ -14,112 +19,65 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
+  late TextEditingController _searchController = TextEditingController(); // Initialize TextEditingController
   bool isSearchBarVisible = false;
   bool isFollowing = false;
+  String _searchQuery = '';
+  late Query _usersQuery;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
-      appBar: isSearchBarVisible ? buildSearchAppBar() : buildDefaultAppBar(),
+      appBar: isSearchBarVisible ? buildSearchAppBar() : buildDefaultAppBar(context),
       body: isSearchBarVisible
           ? buildSearchBody()
-          : buildDefaultBody(), // Show either search or default body
+          : buildDefaultBody(),
     );
   }
 
-  Widget buildDefaultBody() {
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
-      body: ListView.builder(
-        itemCount: 21,
-        itemBuilder: (context, index) {
-          return ListTile(
-            leading: Icon(Icons.account_circle_sharp, color: Theme.of(context).colorScheme.tertiary, size: 40,),
-            title: Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Text(
-                'Item $index',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-            subtitle: Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Subtitle $index', style: TextStyle(color: Theme.of(context).colorScheme.secondary)),
-                  const SizedBox(height: 2),
-                  Text('Followers $index', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
-                ],
-              ),
-            ),
-            trailing: SizedBox(
-              height: 30,
-              width: 90,
-              child: OutlinedButton(
-                onPressed: () {
-                  setState(() {
-                    isFollowing = !isFollowing;
-                  });
-                },
-                style: OutlinedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Theme.of(context).colorScheme.primary),
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
-                ),
-                child: Text(
-                  isFollowing ? 'Following' : 'Follow',
-                  style: TextStyle(color: Theme.of(context).colorScheme.tertiary),
-                ),
-              ),
-            ),
-            onTap: () {
-              // Handle item tap
-              print('Tapped on Item $index');
-            },
-          );
-        },
-      ),
-    );
-  }
 
-  Widget buildSearchBody() {
-    return const Center(
-        child: Text('Try searching for people, topics or keywords',
-          style: TextStyle(color: Colors.grey, fontSize: 15, fontWeight: FontWeight.w600),));
-  }
-
-  AppBar buildDefaultAppBar() {
+  AppBar buildDefaultAppBar(BuildContext context) {
     User? _user = FirebaseAuth.instance.currentUser;
     return AppBar(
       elevation: 0,
       backgroundColor: Colors.transparent,
       centerTitle: true,
-      leading: isSearchBarVisible ? null :
-      GestureDetector(
+      leading: GestureDetector(
         onTap: () {
-          Navigator.push(context, CupertinoPageRoute(builder: (context) => const ProfilePage()),);
+          Navigator.push(context, CupertinoPageRoute(builder: (context) => const ProfilePage()));
         },
         child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: CircleAvatar(
-            radius: 50,
-            backgroundColor: Colors.transparent, // Match with the background color
-            child: _user?.photoURL != null // Check if user has a photoURL
-                ? ClipRRect(
-              borderRadius: BorderRadius.circular(100.0),
-              child: CachedNetworkImage(
-                imageUrl: _user!.photoURL!,
-                width: 100, // Set the desired width
-                height: 100, // Set the desired height
-                fit: BoxFit.cover, // Adjust the fit as per your requirement
-                placeholder: (context, url) => CircularProgressIndicator(), // Placeholder widget while loading
-                errorWidget: (context, url, error) => Icon(Icons.error), // Error widget if image fails to load
-              ),
-            )
-                : Icon(Icons.account_circle, size: 30, color: Theme.of(context).colorScheme.tertiary,), // Display an icon if no photoURL is available
+          padding: const EdgeInsets.all(13.0),
+          child: StreamBuilder<DocumentSnapshot>(
+            stream: FirebaseFirestore.instance.collection('users').doc(_user?.uid).snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return CircularProgressIndicator(); // Display a loading indicator while fetching user data
+              }
+
+              if (snapshot.hasError) {
+                return Icon(Icons.error); // Display an error icon if there's an error fetching user data
+              }
+
+              if (!snapshot.hasData || !snapshot.data!.exists) {
+                return Icon(Icons.account_circle, size: 30, color: Theme.of(context).colorScheme.tertiary);
+              }
+
+              // Access user data from the snapshot
+              Map<String, dynamic> userData = snapshot.data!.data() as Map<String, dynamic>;
+
+              // Check if user has a profile picture URL
+              if (userData.containsKey('profile') && userData['profile'] != null) {
+                return CircleAvatar(
+                  radius: 25,
+                  backgroundImage: CachedNetworkImageProvider(userData['profile']),
+                  backgroundColor: Colors.transparent,
+                );
+              } else {
+                return Icon(Icons.account_circle, size: 30, color: Theme.of(context).colorScheme.tertiary);
+              }
+            },
           ),
         ),
       ),
@@ -164,6 +122,79 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
+  Widget buildDefaultBody() {
+    User? currentUser = FirebaseAuth.instance.currentUser;
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.background,
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('users').where('uid', isNotEqualTo: currentUser?.uid).snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Text('Error: ${snapshot.error}');
+          }
+          return ListView.builder(
+            itemCount: snapshot.data!.docs.length,
+            itemBuilder: (context, index) {
+              var userData = snapshot.data!.docs[index].data() as Map<String, dynamic>; // Cast userData to Map<String, dynamic>
+              return ListTile(
+                leading: CircleAvatar(
+                  radius: 20,
+                  backgroundImage: NetworkImage(userData['profile'] ?? ''), // Assuming 'profileImageUrl' is the field containing the profile image URL
+                ),
+                title: Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(
+                    userData['name'] ?? '',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    userData['email'] != null ? userData['email']! : (userData['phoneNumber'] != null ? userData['phoneNumber']! : ''),
+                  ),
+                ),
+                trailing: SizedBox(
+                  height: 30,
+                  width: 90,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      // Handle button press
+                      setState(() {
+                        isFollowing = !isFollowing;
+                      });
+                    },
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        side: BorderSide(color: Theme.of(context).colorScheme.primary),
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                    ),
+                    child: Text(
+                      isFollowing ? 'Following' : 'Follow',
+                      style: TextStyle(color: Theme.of(context).colorScheme.tertiary),
+                    ),
+                  ),
+                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    CupertinoPageRoute(builder: (context) => TargetProfilePage(userId: userData['uid'])),
+                  );
+                },
+              );
+
+            },
+          );
+        },
+      ),
+    );
+  }
+
+
   AppBar buildSearchAppBar() {
     return AppBar(
       elevation: 0,
@@ -175,9 +206,11 @@ class _SearchPageState extends State<SearchPage> {
             isSearchBarVisible = false;
           });
         },
-        icon: Icon(Icons.arrow_back,),
+        icon: Icon(Icons.arrow_back),
       ),
       title: TextField(
+        controller: _searchController,
+        onChanged: (value) => searchUsers(value),
         autofocus: true,
         style: TextStyle(),
         decoration: InputDecoration(
@@ -187,5 +220,71 @@ class _SearchPageState extends State<SearchPage> {
         ),
       ),
     );
+  }
+
+  Widget buildSearchBody() {
+    if (_searchController.text.isEmpty) {
+      return Center(
+        child: Text(
+          'Try searching for people using their names..',
+          style: TextStyle(color: Colors.grey, fontSize: 15, fontWeight: FontWeight.w600),
+        ),
+      );
+    } else {
+      return StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .where('name', isGreaterThanOrEqualTo: _searchController.text) // Step 2
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return Center(
+              child: Text(
+                'No results found',
+                style: TextStyle(color: Colors.grey, fontSize: 15, fontWeight: FontWeight.w600),
+              ),
+            );
+          }
+          return ListView.builder(
+            itemCount: snapshot.data!.docs.length,
+            itemBuilder: (context, index) {
+              var userData = snapshot.data!.docs[index].data() as Map<String, dynamic>;
+              return ListTile(
+                leading: CircleAvatar(
+                  radius: 20,
+                  backgroundImage: NetworkImage(userData['profile'] ?? ''), // Assuming 'profile' contains the profile image URL
+                ),
+                title: Text(userData['name'] ?? ''),
+                subtitle: Text(
+                  userData['email'] != null ? userData['email']! : (userData['phoneNumber'] != null ? userData['phoneNumber']! : ''),
+                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => TargetProfilePage(userId: userData['uid'])),
+                  );
+                },
+              );
+            },
+          );
+        },
+      );
+    }
+  }
+
+  // Function to perform search operation based on entered text (Step 2)
+  void searchUsers(String query) {
+    setState(() {
+      _searchQuery = query.trim();
+      _usersQuery = FirebaseFirestore.instance.collection('users')
+          .where('name', isGreaterThanOrEqualTo: _searchQuery)
+          .where('name', isLessThan: _searchQuery + 'z');
+    });
   }
 }

@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -20,29 +21,39 @@ class HomePage extends StatelessWidget {
         centerTitle: true,
         leading: GestureDetector(
           onTap: () {
-            Navigator.push(
-              context,
-              CupertinoPageRoute(builder: (context) => ProfilePage()),
-            );
+            Navigator.push(context, CupertinoPageRoute(builder: (context) => const ProfilePage()));
           },
           child: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: CircleAvatar(
-              radius: 50,
-              backgroundColor: Colors.transparent, // Match with the background color
-              child: _user?.photoURL != null // Check if user has a photoURL
-                  ? ClipRRect(
-                borderRadius: BorderRadius.circular(100.0),
-                child: CachedNetworkImage(
-                  imageUrl: _user!.photoURL!,
-                  width: 100, // Set the desired width
-                  height: 100, // Set the desired height
-                  fit: BoxFit.cover, // Adjust the fit as per your requirement
-                  placeholder: (context, url) => CircularProgressIndicator(), // Placeholder widget while loading
-                  errorWidget: (context, url, error) => Icon(Icons.error), // Error widget if image fails to load
-                ),
-              )
-                  : Icon(Icons.account_circle, size: 30, color: Theme.of(context).colorScheme.tertiary,), // Display an icon if no photoURL is available
+            padding: const EdgeInsets.all(13.0),
+            child: StreamBuilder<DocumentSnapshot>(
+              stream: FirebaseFirestore.instance.collection('users').doc(_user?.uid).snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return CircularProgressIndicator(); // Display a loading indicator while fetching user data
+                }
+
+                if (snapshot.hasError) {
+                  return Icon(Icons.error); // Display an error icon if there's an error fetching user data
+                }
+
+                if (!snapshot.hasData || !snapshot.data!.exists) {
+                  return Icon(Icons.account_circle, size: 30, color: Theme.of(context).colorScheme.tertiary);
+                }
+
+                // Access user data from the snapshot
+                Map<String, dynamic> userData = snapshot.data!.data() as Map<String, dynamic>;
+
+                // Check if user has a profile picture URL
+                if (userData.containsKey('profile') && userData['profile'] != null) {
+                  return CircleAvatar(
+                    radius: 25,
+                    backgroundImage: CachedNetworkImageProvider(userData['profile']),
+                    backgroundColor: Colors.transparent,
+                  );
+                } else {
+                  return Icon(Icons.account_circle, size: 30, color: Theme.of(context).colorScheme.tertiary);
+                }
+              },
             ),
           ),
         ),
