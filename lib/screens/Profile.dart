@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:q/models/customCircularProgress.dart';
 import 'package:q/screens/settings/edit_profile.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/userModel.dart';
 import 'auth/dashBoard.dart';
@@ -302,12 +303,20 @@ class _ProfilePageState extends State<ProfilePage> {
                     ],
                   ),
                   SizedBox(height: 10,),
-                  Row(
-                    children: [
-                      Icon(Icons.link_outlined, color: Theme.of(context).colorScheme.secondary, size: 16,),
-                      SizedBox(width: 5,),
-                      Text(_fetchedUserData.website.toString(), style: TextStyle(color: Colors.blue, fontSize: 16, letterSpacing: 0.7),),
-                    ],
+                  GestureDetector(
+                    onTap: () {
+                      launchUrl(
+                        Uri.parse(_fetchedUserData.website.toString()),
+                        mode: LaunchMode.inAppBrowserView
+                      );
+                    },
+                    child: Row(
+                      children: [
+                        Icon(Icons.link_outlined, color: Theme.of(context).colorScheme.secondary, size: 16,),
+                        SizedBox(width: 5,),
+                        Text(_fetchedUserData.website.toString(), style: TextStyle(color: Colors.blue, fontSize: 16, letterSpacing: 0.7),),
+                      ],
+                    ),
                   ),
                   SizedBox(height: 10,),
                   Text(_fetchedUserData.bio.toString(), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.secondary),),
