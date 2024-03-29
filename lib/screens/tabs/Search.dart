@@ -5,8 +5,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:q/screens/target_profile.dart';
 
-import '../Profile.dart';
 import '../Setting.dart';
+import '../UserProfile.dart';
 
 
 
@@ -45,7 +45,7 @@ class _SearchPageState extends State<SearchPage> {
       centerTitle: true,
       leading: GestureDetector(
         onTap: () {
-          Navigator.push(context, CupertinoPageRoute(builder: (context) => const ProfilePage()));
+          Navigator.push(context, CupertinoPageRoute(builder: (context) => const UserProfilePage()));
         },
         child: Padding(
           padding: const EdgeInsets.all(13.0),
@@ -139,6 +139,8 @@ class _SearchPageState extends State<SearchPage> {
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
               var userData = snapshot.data!.docs[index].data() as Map<String, dynamic>; // Cast userData to Map<String, dynamic>
+              String userId = snapshot.data!.docs[index].id; // Get the userId of the target user
+              bool isFollowing = userData['followers'] != null && userData['followers'].contains(currentUser?.uid);
               return ListTile(
                 leading: CircleAvatar(
                   radius: 20,
@@ -163,9 +165,7 @@ class _SearchPageState extends State<SearchPage> {
                   child: OutlinedButton(
                     onPressed: () {
                       // Handle button press
-                      setState(() {
-                        isFollowing = !isFollowing;
-                      });
+                      followUser(userId, isFollowing, currentUser?.uid);
                     },
                     style: OutlinedButton.styleFrom(
                       shape: RoundedRectangleBorder(
@@ -182,17 +182,43 @@ class _SearchPageState extends State<SearchPage> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    CupertinoPageRoute(builder: (context) => TargetProfilePage(userId: userData['uid'])),
+                    CupertinoPageRoute(builder: (context) => TargetProfilePage(userId: userId)),
                   );
                 },
               );
-
             },
           );
         },
       ),
     );
   }
+
+  void followUser(String userId, bool isFollowing, String? currentUserId) {
+    CollectionReference usersRef = FirebaseFirestore.instance.collection('users');
+
+    // Add or remove current user from target user's followers list
+    if (!isFollowing) {
+      // If not following, add to followers list
+      usersRef.doc(userId).update({
+        'followers': FieldValue.arrayUnion([currentUserId]),
+      });
+      // Add target user to current user's following list
+      usersRef.doc(currentUserId).update({
+        'following': FieldValue.arrayUnion([userId]),
+      });
+    } else {
+      // If following, remove from followers list
+      usersRef.doc(userId).update({
+        'followers': FieldValue.arrayRemove([currentUserId]),
+      });
+      // Remove target user from current user's following list
+      usersRef.doc(currentUserId).update({
+        'following': FieldValue.arrayRemove([userId]),
+      });
+    }
+  }
+
+
 
 
   AppBar buildSearchAppBar() {
@@ -234,7 +260,8 @@ class _SearchPageState extends State<SearchPage> {
       return StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('users')
-            .where('name', isGreaterThanOrEqualTo: _searchController.text) // Step 2
+            .where('name', isGreaterThanOrEqualTo: _searchController.text)
+            .where('name', isLessThan: _searchController.text + 'z')
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -251,14 +278,16 @@ class _SearchPageState extends State<SearchPage> {
               ),
             );
           }
+          // Filter out current user's data
+          var filteredDocs = snapshot.data!.docs.where((doc) => doc['uid'] != FirebaseAuth.instance.currentUser?.uid).toList();
           return ListView.builder(
-            itemCount: snapshot.data!.docs.length,
+            itemCount: filteredDocs.length,
             itemBuilder: (context, index) {
-              var userData = snapshot.data!.docs[index].data() as Map<String, dynamic>;
+              var userData = filteredDocs[index].data() as Map<String, dynamic>;
               return ListTile(
                 leading: CircleAvatar(
                   radius: 20,
-                  backgroundImage: NetworkImage(userData['profile'] ?? ''), // Assuming 'profile' contains the profile image URL
+                  backgroundImage: NetworkImage(userData['profile'] ?? ''),
                 ),
                 title: Text(userData['name'] ?? ''),
                 subtitle: Text(
@@ -277,6 +306,7 @@ class _SearchPageState extends State<SearchPage> {
       );
     }
   }
+
 
   // Function to perform search operation based on entered text (Step 2)
   void searchUsers(String query) {

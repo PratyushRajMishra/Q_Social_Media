@@ -5,8 +5,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:q/screens/write_message.dart';
 
-import '../Profile.dart';
 import '../Setting.dart';
+import '../UserProfile.dart';
 
 class MessagePage extends StatefulWidget {
   const MessagePage({Key? key});
@@ -94,7 +94,7 @@ class _MessagePageState extends State<MessagePage> {
       centerTitle: true,
       leading: GestureDetector(
         onTap: () {
-          Navigator.push(context, CupertinoPageRoute(builder: (context) => const ProfilePage()));
+          Navigator.push(context, CupertinoPageRoute(builder: (context) => const UserProfilePage()));
         },
         child: Padding(
           padding: const EdgeInsets.all(13.0),

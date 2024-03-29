@@ -49,6 +49,7 @@ dependencies:
   cloud_firestore: ^4.9.2
   image_picker: ^1.0.7
   url_launcher: ^6.2.4
+  shimmer: ^3.0.0
 
 
 

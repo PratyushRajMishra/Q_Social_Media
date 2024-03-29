@@ -4,7 +4,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-import '../Profile.dart';
+import '../../models/postModel.dart';
+import '../UserProfile.dart';
+
+
 
 class PostPage extends StatefulWidget {
   const PostPage({Key? key}) : super(key: key);
@@ -17,6 +20,7 @@ class _PostPageState extends State<PostPage> {
   TextEditingController _textController = TextEditingController();
   TextEditingController _questionController = TextEditingController();
   bool askingQuestion = false; // Flag to determine whether to show text field or ask question
+  bool _isPosting = false; // Variable to track if post is being uploaded
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +47,7 @@ class _PostPageState extends State<PostPage> {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 15),
             child: ElevatedButton(
-              onPressed: (askingQuestion && _questionController.text.isEmpty) ||
+              onPressed: _isPosting ? null : (askingQuestion && _questionController.text.isEmpty) ||
                   (!askingQuestion && _textController.text.isEmpty)
                   ? null // Disable button if question field is empty in ask question mode or text field is empty
                   : _onPostPressed,
@@ -63,8 +67,8 @@ class _PostPageState extends State<PostPage> {
                   ),
                 ),
               ),
-              child: const Text(
-                'Post',
+              child: Text(
+                _isPosting ? 'Posting...' : 'Post', // Change text based on _isPosting value
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w900,
@@ -72,7 +76,7 @@ class _PostPageState extends State<PostPage> {
                 ),
               ),
             ),
-          ),
+          )
         ],
       ),
       body: Column(
@@ -80,16 +84,16 @@ class _PostPageState extends State<PostPage> {
           ListTile(
             leading: GestureDetector(
               onTap: () {
-                Navigator.push(context, CupertinoPageRoute(builder: (context) => const ProfilePage()));
+                Navigator.push(context, CupertinoPageRoute(builder: (context) => const UserProfilePage()));
               },
               child: Padding(
                 padding: const EdgeInsets.all(2.0),
                 child: StreamBuilder<DocumentSnapshot>(
                   stream: FirebaseFirestore.instance.collection('users').doc(_user?.uid).snapshots(),
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return CircularProgressIndicator(); // Display a loading indicator while fetching user data
-                    }
+                    // if (snapshot.connectionState == ConnectionState.waiting) {
+                    //   return CircularProgressIndicator(); // Display a loading indicator while fetching user data
+                    // }
 
                     if (snapshot.hasError) {
                       return Icon(Icons.error); // Display an error icon if there's an error fetching user data
@@ -296,8 +300,66 @@ class _PostPageState extends State<PostPage> {
   }
 
 
+  void _onPostPressed() async {
+    User? _user = FirebaseAuth.instance.currentUser;
 
-  void _onPostPressed() {
-    // Add your logic for the "Post" button onPressed event
+    // Get the text from the text controller
+    String postText = _textController.text.trim();
+
+    // Check if the post text is not empty
+    if (postText.isNotEmpty) {
+      try {
+        setState(() {
+          _isPosting = true; // Set isPosting to true when starting the upload
+        });
+
+        // Access Firestore instance
+        FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+        // Add the post to the 'posts' collection for the current user
+        DocumentReference postRef = await firestore.collection('users').doc(_user?.uid).collection('posts').add({
+          'text': postText,
+          'timestamp': Timestamp.now(), // Add timestamp for sorting purposes
+        });
+
+        // Retrieve the ID of the newly added post
+        String postId = postRef.id;
+
+        // Create a PostModel object with the post details
+        PostModel post = PostModel(
+          id: postId, // Include the post ID
+          userId: _user?.uid ?? '',
+          text: postText,
+          timestamp: Timestamp.now(),
+          likedBy: [],
+        );
+
+        // Save the post details to Firestore using the PostModel's toMap() method
+        await firestore.collection('users').doc(_user?.uid).collection('posts').doc(postId).set(post.toMap());
+
+        // Clear the text field after posting
+        _textController.clear();
+
+        // Show a SnackBar to indicate successful posting
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Post saved successfully'),
+          ),
+        );
+      } catch (error) {
+        // Handle errors here
+        print('Error saving post: $error');
+        // Show a SnackBar to indicate error
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save post'),
+          ),
+        );
+      } finally {
+        setState(() {
+          _isPosting = false; // Set isPosting to false after upload completes or fails
+        });
+      }
+    }
   }
 }

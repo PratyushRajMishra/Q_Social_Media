@@ -4,8 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-import '../Profile.dart';
 import '../Setting.dart';
+import '../UserProfile.dart';
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
 
@@ -25,7 +25,7 @@ class _NotificationPageState extends State<NotificationPage> {
         //centerTitle: true,
         leading: GestureDetector(
           onTap: () {
-            Navigator.push(context, CupertinoPageRoute(builder: (context) => const ProfilePage()));
+            Navigator.push(context, CupertinoPageRoute(builder: (context) => const UserProfilePage()));
           },
           child: Padding(
             padding: const EdgeInsets.all(13.0),

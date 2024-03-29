@@ -175,6 +175,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         centerTitle: true,
@@ -264,6 +265,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   const SizedBox(height: 20),
                   TextField(
                     controller: _bioController,
+                    maxLines: null,
                     decoration: InputDecoration(labelText: 'Bio'),
                     maxLength: 100,
                     onChanged: (value) => _handleTextChanges(),
