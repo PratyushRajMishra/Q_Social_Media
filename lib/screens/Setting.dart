@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:q/screens/settings/themes.dart';
+import 'package:q/screens/settings/yourAccount.dart';
 
 
 class SettingPage extends StatelessWidget {
@@ -48,6 +49,12 @@ class SettingPage extends StatelessWidget {
           child: Column(
             children: [
               ListTile(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    CupertinoPageRoute(builder: (context) => const YourAccountPage()),
+                  );
+                },
                 leading: Icon(Icons.person_outline),
                 title: Text('Your account'),
                 subtitle: Text('See information about your account and learn about your account deactivation options.'),

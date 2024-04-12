@@ -18,13 +18,14 @@ class BottomNavbarPage extends StatefulWidget {
 }
 
 class _BottomNavbarPageState extends State<BottomNavbarPage> {
+  String audioPath = '';
   int _selectedIndex = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   final List<Widget> _tabs = [
     HomePage(),
     const SearchPage(),
-    const PostPage(),
+    PostPage(audioPath: '',),
     const NotificationPage(),
     const MessagePage(),
   ];
@@ -32,7 +33,7 @@ class _BottomNavbarPageState extends State<BottomNavbarPage> {
   final List<List<IconData>> _tabIcons = [
     [Icons.home, Icons.home_outlined],
     [Icons.search, Icons.search_outlined],
-    [Icons.note_alt, Icons.note_alt_outlined],
+    [Icons.edit_note_outlined, Icons.edit_note],
     [Icons.notifications, Icons.notifications_outlined],
     [Icons.mail, Icons.mail_outline_outlined],
   ];
@@ -58,53 +59,19 @@ class _BottomNavbarPageState extends State<BottomNavbarPage> {
               ),
               onPressed: () {
                 if (index == 2) {
-                  Navigator.push(context, _customPageRouteBuilder(const PostPage()));
+                  Navigator.push(
+                    context,
+                    _customPageRouteBuilder(
+                      PostPage(audioPath: audioPath),
+                    ),
+                  );
+
                 } else {
                   _onTabTapped(index);
                 }
               },
             );
           }),
-        ),
-      ),
-      drawer: Drawer(
-        child: SizedBox(
-          width: MediaQuery.of(context).size.width * 0.75,
-          child: ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              DrawerHeader(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                child: Text(
-                  'Welcome, ${widget.userModel.name ?? 'Guest'}',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                  ),
-                ),
-              ),
-              ListTile(
-                title: Text('Profile'),
-                onTap: () {
-                  // Navigate to profile page
-                },
-              ),
-              ListTile(
-                title: Text('Settings'),
-                onTap: () {
-                  // Navigate to settings page
-                },
-              ),
-              ListTile(
-                title: Text('Sign Out'),
-                onTap: () {
-                  // Perform sign out action
-                },
-              ),
-            ],
-          ),
         ),
       ),
     );

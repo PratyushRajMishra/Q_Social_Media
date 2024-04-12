@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -7,12 +9,18 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pinput/pinput.dart';
+import 'package:q/followersList.dart';
+import 'package:q/screens/comments.dart';
+import 'package:q/screens/postDetails.dart';
 import 'package:q/screens/settings/edit_profile.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../followingList.dart';
 import '../models/customCircularProgress.dart';
 import '../models/postModel.dart';
 import '../models/userModel.dart';
+import '../widgets/audioPlayerWidget.dart';
+import '../widgets/videoPlayerWidget.dart';
 
 class UserProfilePage extends StatefulWidget {
   const UserProfilePage({Key? key}) : super(key: key);
@@ -21,7 +29,8 @@ class UserProfilePage extends StatefulWidget {
   State<UserProfilePage> createState() => _UserProfilePageState();
 }
 
-class _UserProfilePageState extends State<UserProfilePage> with SingleTickerProviderStateMixin {
+class _UserProfilePageState extends State<UserProfilePage>
+    with SingleTickerProviderStateMixin {
   late User? _user;
   late UserModel _userData = UserModel();
   bool _isLoading = true;
@@ -31,16 +40,15 @@ class _UserProfilePageState extends State<UserProfilePage> with SingleTickerProv
   int followersCount = 0; // Define variable to hold followers count
   int followingCount = 0; // Define variable to hold following count
 
-
   StreamSubscription<DocumentSnapshot>? _userSnapshotSubscription;
 
   @override
   void initState() {
     super.initState();
+    _userPosts = [];
     _tabController = TabController(vsync: this, length: 3);
     _initializeUser();
   }
-
 
   @override
   void dispose() {
@@ -115,10 +123,10 @@ class _UserProfilePageState extends State<UserProfilePage> with SingleTickerProv
 
       // Fetch user data including followers and following
       DocumentSnapshot<Map<String, dynamic>> userSnapshot =
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(_user?.uid)
-          .get();
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(_user?.uid)
+              .get();
       if (userSnapshot.exists) {
         Map<String, dynamic>? userData = userSnapshot.data();
 
@@ -139,446 +147,467 @@ class _UserProfilePageState extends State<UserProfilePage> with SingleTickerProv
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       body: _userData != null && _userProfilePictureUrl != null
           ? DefaultTabController(
-        length: 3,
-        child: NestedScrollView(
-          headerSliverBuilder:
-              (BuildContext context, bool innerBoxIsScrolled) {
-            return <Widget>[
-              SliverAppBar(
-                titleSpacing: 0,
-                title: Text(
-                  _userData.name.toString(),
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.tertiary,
-                    fontWeight: FontWeight.w400,
-                    letterSpacing: 1.0,
-                  ),
-                ),
-                stretch: true,
-                backgroundColor:
-                Theme.of(context).colorScheme.background,
-                elevation: 0,
-                pinned: true,
-                expandedHeight:
-                MediaQuery.of(context).size.height * 0.34,
-                flexibleSpace: FlexibleSpaceBar(
-                  collapseMode: CollapseMode.parallax,
-                  background: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Column(
-                        crossAxisAlignment:
-                        CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(
-                                left: 15,
-                                right: 15,
-                                top: 75,
-                                bottom: 0),
-                            child: Column(
-                              crossAxisAlignment:
-                              CrossAxisAlignment.start,
+              length: 3,
+              child: NestedScrollView(
+                headerSliverBuilder:
+                    (BuildContext context, bool innerBoxIsScrolled) {
+                  return <Widget>[
+                    SliverAppBar(
+                      titleSpacing: 0,
+                      title: Text(
+                        _userData.name.toString(),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.tertiary,
+                          fontWeight: FontWeight.w400,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                      stretch: true,
+                      backgroundColor: Theme.of(context).colorScheme.background,
+                      elevation: 0,
+                      pinned: true,
+                      expandedHeight: MediaQuery.of(context).size.height * 0.34,
+                      flexibleSpace: FlexibleSpaceBar(
+                        collapseMode: CollapseMode.parallax,
+                        background: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  mainAxisAlignment:
-                                  MainAxisAlignment
-                                      .spaceBetween,
-                                  crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-                                  children: [
-                                    Padding(
-                                      padding:
-                                      const EdgeInsets.only(
-                                          top: 15),
-                                      child: Column(
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                      left: 15, right: 15, top: 75, bottom: 0),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
                                         mainAxisAlignment:
-                                        MainAxisAlignment
-                                            .start,
+                                            MainAxisAlignment.spaceBetween,
                                         crossAxisAlignment:
-                                        CrossAxisAlignment
-                                            .start,
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Padding(
                                             padding:
-                                            const EdgeInsets
-                                                .only(
-                                                left: 15),
-                                            child: Row(
+                                                const EdgeInsets.only(top: 15),
+                                            child: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
-                                                Column(
-                                                  children: [
-                                                    Text(
-                                                      _userPosts.length.toString(),
-                                                      style: TextStyle(
-                                                        fontSize: 18,
-                                                        fontWeight: FontWeight.bold,
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          left: 15),
+                                                  child: Row(
+                                                    children: [
+                                                      Column(
+                                                        children: [
+                                                          Text(
+                                                            _userPosts.length
+                                                                .toString(),
+                                                            style: TextStyle(
+                                                              fontSize: 18,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(
+                                                              height: 5),
+                                                          Text(
+                                                            'Posts',
+                                                            style: TextStyle(
+                                                              fontSize: 14,
+                                                              color: Theme.of(
+                                                                      context)
+                                                                  .colorScheme
+                                                                  .tertiary,
+                                                            ),
+                                                          ),
+                                                        ],
                                                       ),
-                                                    ),
-                                                    const SizedBox(height: 5),
-                                                    Text(
-                                                      'Posts',
-                                                      style: TextStyle(
-                                                        fontSize: 14,
-                                                        color: Theme.of(context).colorScheme.tertiary,
+                                                      const SizedBox(width: 30),
+                                                      InkWell(
+                                                        onTap: () {
+                                                          Navigator.push(
+                                                              context,
+                                                              MaterialPageRoute(
+                                                                  builder:
+                                                                      (context) =>
+                                                                          FollowersListPage(userId: _userData.uid.toString(),)));
+                                                        },
+                                                        child: Column(
+                                                          children: [
+                                                            Text(
+                                                              _userData
+                                                                  .followers!
+                                                                  .length
+                                                                  .toString(),
+                                                              style: TextStyle(
+                                                                fontSize: 18,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
+                                                            ),
+                                                            const SizedBox(
+                                                                height: 5),
+                                                            Text(
+                                                              'Followers',
+                                                              style: TextStyle(
+                                                                fontSize: 14,
+                                                                color: Theme.of(
+                                                                        context)
+                                                                    .colorScheme
+                                                                    .tertiary,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
                                                       ),
-                                                    ),
-                                                  ],
+                                                      const SizedBox(width: 30),
+                                                      InkWell(
+                                                        onTap: () {
+                                                          Navigator.push(
+                                                              context,
+                                                              MaterialPageRoute(
+                                                                  builder:
+                                                                      (context) =>
+                                                                      FollowingListPage(userId: _userData.uid.toString(),)));
+                                                        },
+                                                        child: Column(
+                                                          children: [
+                                                            Text(
+                                                              _userData.following!
+                                                                  .length
+                                                                  .toString(),
+                                                              style: TextStyle(
+                                                                fontSize: 18,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
+                                                            ),
+                                                            const SizedBox(
+                                                                height: 5),
+                                                            Text(
+                                                              'Following',
+                                                              style: TextStyle(
+                                                                fontSize: 14,
+                                                                color: Theme.of(
+                                                                        context)
+                                                                    .colorScheme
+                                                                    .tertiary,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
-                                                const SizedBox(width: 30),
-                                                Column(
-                                                  children: [
-                                                    Text(
-                                                      _userData.followers!.length.toString(),
-                                                      style: TextStyle(
-                                                        fontSize: 18,
-                                                        fontWeight: FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 5),
-                                                    Text(
-                                                      'Followers',
-                                                      style: TextStyle(
-                                                        fontSize: 14,
-                                                        color: Theme.of(context).colorScheme.tertiary,
-                                                      ),
-                                                    ),
-                                                  ],
+                                                const SizedBox(height: 10),
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          left: 3),
+                                                  child: Text(
+                                                    _user?.email ??
+                                                        _userData.phoneNumber ??
+                                                        '',
+                                                    style: TextStyle(
+                                                        fontSize: 16,
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .secondary),
+                                                  ),
                                                 ),
-                                                const SizedBox(width: 30),
-                                                Column(
+                                                SizedBox(
+                                                  height: 10,
+                                                ),
+                                                Row(
                                                   children: [
-                                                    Text(
-                                                      _userData.following!.length.toString(),
-                                                      style: TextStyle(
-                                                        fontSize: 18,
-                                                        fontWeight: FontWeight.bold,
-                                                      ),
+                                                    Icon(
+                                                      Icons
+                                                          .location_on_outlined,
+                                                      size: 15,
+                                                      color: Theme.of(context)
+                                                          .colorScheme
+                                                          .secondary,
                                                     ),
-                                                    const SizedBox(height: 5),
+                                                    SizedBox(
+                                                      width: 2,
+                                                    ),
                                                     Text(
-                                                      'Following',
+                                                      _userData.location
+                                                          .toString(),
                                                       style: TextStyle(
-                                                        fontSize: 14,
-                                                        color: Theme.of(context).colorScheme.tertiary,
-                                                      ),
+                                                          color:
+                                                              Theme.of(context)
+                                                                  .colorScheme
+                                                                  .secondary,
+                                                          fontSize: 16),
                                                     ),
                                                   ],
                                                 ),
                                               ],
                                             ),
                                           ),
-                                          const SizedBox(
-                                              height: 10),
-                                          Padding(
-                                            padding:
-                                            const EdgeInsets
-                                                .only(
-                                                left: 3),
-                                            child: Text(
-                                              _user?.email ??
-                                                  _userData
-                                                      .phoneNumber ??
-                                                  '',
-                                              style: TextStyle(
-                                                  fontSize: 16,
-                                                  color: Theme.of(
-                                                      context)
-                                                      .colorScheme
-                                                      .secondary),
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: 10,
-                                          ),
-                                          Row(
-                                            children: [
-                                              Icon(
-                                                Icons
-                                                    .location_on_outlined,
-                                                size: 15,
-                                                color: Theme.of(
-                                                    context)
-                                                    .colorScheme
-                                                    .secondary,
-                                              ),
-                                              SizedBox(
-                                                width: 2,
-                                              ),
-                                              Text(
-                                                _userData.location
-                                                    .toString(),
-                                                style: TextStyle(
-                                                    color: Theme.of(
-                                                        context)
+                                          CircleAvatar(
+                                            radius: 50,
+                                            backgroundColor: Colors.transparent,
+                                            child: _userProfilePictureUrl !=
+                                                    null
+                                                ? _userProfilePictureUrl!
+                                                        .startsWith('http')
+                                                    ? CachedNetworkImage(
+                                                        imageUrl:
+                                                            _userProfilePictureUrl!,
+                                                        imageBuilder: (context,
+                                                                imageProvider) =>
+                                                            CircleAvatar(
+                                                          backgroundImage:
+                                                              imageProvider,
+                                                          radius: 50,
+                                                        ),
+                                                        placeholder: (context,
+                                                                url) =>
+                                                            Center(
+                                                                child:
+                                                                    const CircularProgressIndicator()),
+                                                        errorWidget: (context,
+                                                                url, error) =>
+                                                            const Icon(
+                                                                Icons.error),
+                                                      )
+                                                    : (_userProfilePictureUrl ==
+                                                                'DEFAULT_IMAGE_URL' ||
+                                                            _userProfilePictureUrl!
+                                                                .isEmpty)
+                                                        ? Icon(
+                                                            Icons
+                                                                .account_circle,
+                                                            size: 100,
+                                                            color: Theme.of(
+                                                                    context)
+                                                                .colorScheme
+                                                                .tertiary,
+                                                          )
+                                                        : CircleAvatar(
+                                                            backgroundImage:
+                                                                NetworkImage(
+                                                                    _userProfilePictureUrl!),
+                                                            radius: 50,
+                                                          )
+                                                : Icon(
+                                                    Icons.account_circle,
+                                                    size: 100,
+                                                    color: Theme.of(context)
                                                         .colorScheme
-                                                        .secondary,
-                                                    fontSize: 16),
-                                              ),
-                                            ],
+                                                        .tertiary,
+                                                  ),
                                           ),
                                         ],
                                       ),
-                                    ),
-                                    CircleAvatar(
-                                      radius: 50,
-                                      backgroundColor:
-                                      Colors.transparent,
-                                      child: _userProfilePictureUrl !=
-                                          null
-                                          ? _userProfilePictureUrl!
-                                          .startsWith(
-                                          'http')
-                                          ? CachedNetworkImage(
-                                        imageUrl:
-                                        _userProfilePictureUrl!,
-                                        imageBuilder: (context,
-                                            imageProvider) =>
-                                            CircleAvatar(
-                                              backgroundImage:
-                                              imageProvider,
-                                              radius: 50,
-                                            ),
-                                        placeholder:
-                                            (context, url) =>
-                                            Center(
-                                                child:
-                                                const CircularProgressIndicator()),
-                                        errorWidget: (context,
-                                            url, error) =>
-                                        const Icon(
-                                            Icons.error),
-                                      )
-                                          : (_userProfilePictureUrl ==
-                                          'DEFAULT_IMAGE_URL' ||
-                                          _userProfilePictureUrl!
-                                              .isEmpty)
-                                          ? Icon(
-                                        Icons
-                                            .account_circle,
-                                        size: 100,
-                                        color: Theme.of(
-                                            context)
-                                            .colorScheme
-                                            .tertiary,
-                                      )
-                                          : CircleAvatar(
-                                        backgroundImage:
-                                        NetworkImage(
-                                            _userProfilePictureUrl!),
-                                        radius: 50,
-                                      )
-                                          : Icon(
-                                        Icons.account_circle,
-                                        size: 100,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .tertiary,
+                                      SizedBox(
+                                        height: 10,
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: 10,
-                                ),
-                                GestureDetector(
-                                  onTap: () {
-                                    launchUrl(
-                                        Uri.parse(_userData
-                                            .website
-                                            .toString()),
-                                        mode:
-                                        LaunchMode
-                                            .inAppBrowserView);
-                                  },
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.link_outlined,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .secondary,
-                                        size: 16,
+                                      GestureDetector(
+                                        onTap: () {
+                                          launchUrl(
+                                              Uri.parse(
+                                                  _userData.website.toString()),
+                                              mode:
+                                                  LaunchMode.inAppBrowserView);
+                                        },
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.link_outlined,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .secondary,
+                                              size: 16,
+                                            ),
+                                            SizedBox(
+                                              width: 5,
+                                            ),
+                                            Text(
+                                              _userData.website.toString(),
+                                              style: TextStyle(
+                                                  color: Colors.blue,
+                                                  fontSize: 16,
+                                                  letterSpacing: 0.7),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                       SizedBox(
-                                        width: 5,
+                                        height: 10,
                                       ),
                                       Text(
-                                        _userData.website.toString(),
+                                        _userData.bio.toString(),
                                         style: TextStyle(
-                                            color: Colors.blue,
                                             fontSize: 16,
-                                            letterSpacing: 0.7),
+                                            fontWeight: FontWeight.w400,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceAround,
+                                        children: [
+                                          Expanded(
+                                            child: Container(
+                                              height: 30,
+                                              child: ClipRRect(
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                                child: OutlinedButton(
+                                                  onPressed: () {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (context) =>
+                                                            EditProfilePage(),
+                                                      ),
+                                                    );
+                                                  },
+                                                  style: ButtonStyle(
+                                                    shape: MaterialStateProperty
+                                                        .all(
+                                                      RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(10),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    'Edit Profile',
+                                                    style: TextStyle(
+                                                      fontSize: 16,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          SizedBox(
+                                            width: 20,
+                                          ),
+                                          Expanded(
+                                            child: Container(
+                                              height: 30,
+                                              child: ClipRRect(
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                                child: OutlinedButton(
+                                                  onPressed: () {},
+                                                  style: ButtonStyle(
+                                                    shape: MaterialStateProperty
+                                                        .all(
+                                                      RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(10),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    'Share Profile',
+                                                    style: TextStyle(
+                                                      fontSize: 16,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
                                 ),
-                                SizedBox(
-                                  height: 10,
-                                ),
-                                Text(
-                                  _userData.bio.toString(),
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w400,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primary),
-                                ),
-                                const SizedBox(height: 20),
-                                Row(
-                                  mainAxisAlignment:
-                                  MainAxisAlignment.spaceAround,
-                                  children: [
-                                    Expanded(
-                                      child: Container(
-                                        height: 30,
-                                        child: ClipRRect(
-                                          borderRadius:
-                                          BorderRadius.circular(
-                                              10),
-                                          child: OutlinedButton(
-                                            onPressed: () {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      EditProfilePage(),
-                                                ),
-                                              );
-                                            },
-                                            style: ButtonStyle(
-                                              shape: MaterialStateProperty.all(
-                                                RoundedRectangleBorder(
-                                                  borderRadius:
-                                                  BorderRadius.circular(
-                                                      10),
-                                                ),
-                                              ),
-                                            ),
-                                            child: Text(
-                                              'Edit Profile',
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight:
-                                                FontWeight.w500,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: 20,
-                                    ),
-                                    Expanded(
-                                      child: Container(
-                                        height: 30,
-                                        child: ClipRRect(
-                                          borderRadius:
-                                          BorderRadius.circular(
-                                              10),
-                                          child: OutlinedButton(
-                                            onPressed: () {},
-                                            style: ButtonStyle(
-                                              shape: MaterialStateProperty.all(
-                                                RoundedRectangleBorder(
-                                                  borderRadius:
-                                                  BorderRadius.circular(
-                                                      10),
-                                                ),
-                                              ),
-                                            ),
-                                            child: Text(
-                                              'Share Profile',
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight:
-                                                FontWeight.w500,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
                               ],
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
+                    ),
+                    SliverPersistentHeader(
+                      delegate: MySliverPersistentHeaderDelegate(
+                        TabBar(
+                          labelColor: Theme.of(context).colorScheme.tertiary,
+                          unselectedLabelColor:
+                              Theme.of(context).colorScheme.secondary,
+                          indicatorColor: Colors.blue,
+                          indicatorSize: TabBarIndicatorSize.tab,
+                          indicatorWeight: 2.5,
+                          tabs: const [
+                            Tab(
+                              child: Text(
+                                'Posts',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            Tab(
+                              child: Text(
+                                'Replies',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            Tab(
+                              child: Text(
+                                'Saved',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      pinned: true,
+                    ),
+                  ];
+                },
+                body: TabBarView(
+                  children: [
+                    _buildPostsTab(),
+                    _buildRepliesTab(),
+                    _buildSavedTab(),
+                  ],
                 ),
               ),
-              SliverPersistentHeader(
-                delegate: MySliverPersistentHeaderDelegate(
-                  TabBar(
-                    labelColor:
-                    Theme.of(context).colorScheme.tertiary,
-                    unselectedLabelColor:
-                    Theme.of(context).colorScheme.secondary,
-                    indicatorColor: Colors.blue,
-                    indicatorSize: TabBarIndicatorSize.tab,
-                    indicatorWeight: 2.5,
-                    tabs: const [
-                      Tab(
-                        child: Text(
-                          'Posts',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Tab(
-                        child: Text(
-                          'Replies',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Tab(
-                        child: Text(
-                          'Saved',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                pinned: true,
-              ),
-            ];
-          },
-          body: TabBarView(
-            children: [
-              _buildPostsTab(),
-              _buildRepliesTab(),
-              _buildSavedTab(),
-            ],
-          ),
-        ),
-      )
+            )
           : Center(
-        child: CircularProgressIndicator(),
-      ),
+              child: CircularProgressIndicator(),
+            ),
     );
   }
-
 
   Widget _buildPostsTab() {
     _userPosts.sort((a, b) => b.timestamp.compareTo(a.timestamp)); // Sort posts by timestamp in descending order
@@ -607,12 +636,63 @@ class _UserProfilePageState extends State<UserProfilePage> with SingleTickerProv
               shrinkWrap: true,
               itemCount: _userPosts.length,
               itemBuilder: (context, index) {
-                bool isLiked = _userPosts[index].likedBy.contains(FirebaseAuth.instance.currentUser?.uid);
+                bool isLiked = _userPosts[index]
+                    .likedBy
+                    .contains(FirebaseAuth.instance.currentUser?.uid);
                 return Column(
                   children: [
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 0),
                       child: ListTile(
+                        onTap: () async {
+                          showDialog(
+                            barrierDismissible: false, // Prevent user from dismissing the dialog
+                            context: context,
+                            builder: (BuildContext context) {
+                              return Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            },
+                          );
+
+                          try {
+                            // Fetch comments data and liked data simultaneously
+                            final commentsSnapshotFuture = FirebaseFirestore.instance.collection('comments').where('postId', isEqualTo: _userPosts[index].id).get();
+                            final likedSnapshotFuture = FirebaseFirestore.instance.collection('users').doc(_userData.uid).collection('posts').doc(_userPosts[index].id).get();
+
+                            // Wait for both futures to complete
+                            final List<dynamic> comments = (await commentsSnapshotFuture).docs.map((commentDoc) => commentDoc.data()).toList();
+                            final DocumentSnapshot likedSnapshot = await likedSnapshotFuture;
+                            final Map<String, dynamic> likedData = likedSnapshot.data() as Map<String, dynamic>;
+                            // If 'likedData' contains a list of liked users, you can extract it accordingly
+                            final List<dynamic> likedUsers = likedData['likedBy'] ?? [];
+
+                            // Close the progress dialog
+                            Navigator.pop(context);
+
+                            // Navigate to PostDetailsPage with post details, comments, and liked data
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => PostDetailsPage(
+                                  username: _userData.name.toString(),
+                                  text: _userPosts[index].text,
+                                  profilePictureUrl: _userData.profile ?? '',
+                                  postId: _userPosts[index].id,
+                                  comments: comments,
+                                  postTime: _userPosts[index].timestamp,
+                                  likedData: likedUsers,
+                                  userIDs: _userData.uid.toString(),
+                                  mediaUrl: _userPosts[index].mediaUrl.toString(),  // Pass the liked data here
+                                  fileType: _userPosts[index].fileType.toString(),
+                                ),
+                              ),
+                            );
+                          } catch (e) {
+                            print("Error fetching data: $e");
+                            // Handle the error appropriately
+                          }
+                        },
                         contentPadding: EdgeInsets.zero,
                         title: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -620,7 +700,8 @@ class _UserProfilePageState extends State<UserProfilePage> with SingleTickerProv
                             Align(
                               alignment: Alignment.topLeft,
                               child: CircleAvatar(
-                                backgroundImage: NetworkImage(_userProfilePictureUrl ?? ''),
+                                backgroundImage:
+                                NetworkImage(_userProfilePictureUrl ?? ''),
                               ),
                             ),
                             SizedBox(width: 10),
@@ -629,10 +710,12 @@ class _UserProfilePageState extends State<UserProfilePage> with SingleTickerProv
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                     children: [
                                       Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                         children: [
                                           Row(
                                             children: [
@@ -640,27 +723,37 @@ class _UserProfilePageState extends State<UserProfilePage> with SingleTickerProv
                                                 _userData.name.toString(),
                                                 style: TextStyle(
                                                   fontWeight: FontWeight.bold,
-                                                  color: Theme.of(context).colorScheme.tertiary,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .tertiary,
                                                 ),
                                               ),
                                               SizedBox(width: 10),
                                               Text(
-                                                _formatDate(_userPosts[index].timestamp),
+                                                _formatDate(
+                                                    _userPosts[index].timestamp),
                                                 style: TextStyle(
                                                   fontSize: 12,
-                                                  color: Theme.of(context).colorScheme.secondary,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .secondary,
                                                 ),
                                               ),
                                             ],
                                           ),
                                           SizedBox(height: 5),
                                           Container(
-                                            width: MediaQuery.of(context).size.width * 0.7,
+                                            width: MediaQuery.of(context)
+                                                .size
+                                                .width *
+                                                0.7,
                                             child: Text(
                                               _userPosts[index].text,
                                               style: TextStyle(
                                                 fontSize: 16,
-                                                color: Theme.of(context).colorScheme.tertiary,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .tertiary,
                                               ),
                                             ),
                                           ),
@@ -669,52 +762,63 @@ class _UserProfilePageState extends State<UserProfilePage> with SingleTickerProv
                                     ],
                                   ),
                                   SizedBox(height: 12),
+                                  // Display media if available
+                                  if (_userPosts[index].mediaUrl != null)
+                                    _buildMediaWidget(_userPosts[index]), // Add this line
+                                  SizedBox(height: 15,),
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                     children: [
                                       Row(
                                         children: [
                                           GestureDetector(
                                             onTap: () async {
-                                              if (isLiked) {
-                                                _userPosts[index].likedBy.remove(FirebaseAuth.instance.currentUser?.uid);
-                                              } else {
-                                                _userPosts[index].likedBy.add(FirebaseAuth.instance.currentUser!.uid);
-                                              }
-                                              // Update like status in Firestore
-                                              await FirebaseFirestore.instance.collection('users').doc(_user?.uid).collection('posts').doc(_userPosts[index].id).update({
-                                                'likedBy': _userPosts[index].likedBy,
-                                              });
-                                              // Update UI
-                                              setState(() {
-                                                // Update the isLiked variable to reflect the new like status
-                                                isLiked = !isLiked;
-                                              });
+                                              // Your like functionality here
                                             },
                                             child: Icon(
-                                              isLiked ? Icons.favorite : Icons.favorite_border,
-                                              color: isLiked ? Colors.red : Theme.of(context).colorScheme.secondary,
+                                              isLiked
+                                                  ? Icons.favorite
+                                                  : Icons.favorite_border,
+                                              color: isLiked
+                                                  ? Colors.red
+                                                  : Theme.of(context)
+                                                  .colorScheme
+                                                  .secondary,
                                               size: 20,
                                             ),
                                           ),
-                                          SizedBox(width: 5), // Adjust spacing as needed
+                                          SizedBox(width: 5),
                                           Visibility(
-                                            visible: _userPosts[index].likedBy.isNotEmpty,
+                                            visible: _userPosts[index]
+                                                .likedBy
+                                                .isNotEmpty,
                                             child: Text(
                                               '${_userPosts[index].likedBy.length}',
                                               style: TextStyle(
-                                                color: Theme.of(context).colorScheme.secondary,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .secondary,
                                                 fontSize: 16,
                                               ),
                                             ),
                                           ),
                                         ],
                                       ),
-
                                       SizedBox(width: 10),
-                                      InkWell(
+                                      GestureDetector(
                                         onTap: () {
-                                          // Handle comment functionality
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => CommentsPage(
+                                                username: _userData.name.toString(),
+                                                postText: _userPosts[index].text,
+                                                profilePictureUrl: _userData.profile ?? '',
+                                                postId: _userPosts[index].id, // Pass the postId here
+                                              ),
+                                            ),
+                                          );
                                         },
                                         child: Icon(
                                           CupertinoIcons.chat_bubble_text,
@@ -751,7 +855,8 @@ class _UserProfilePageState extends State<UserProfilePage> with SingleTickerProv
                             ),
                             Align(
                               alignment: Alignment.topRight,
-                              child: Icon(Icons.more_vert, color: Colors.black26, size: 17),
+                              child: Icon(Icons.more_vert,
+                                  color: Colors.black26, size: 17),
                             ),
                           ],
                         ),
@@ -768,12 +873,105 @@ class _UserProfilePageState extends State<UserProfilePage> with SingleTickerProv
     );
   }
 
+  Widget _buildMediaWidget(PostModel post) {
+    if (post.fileType == 'image') {
+      return Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.5,
+          maxWidth: MediaQuery.of(context).size.width * 0.7,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.network(
+            post.mediaUrl!,
+            fit: BoxFit.cover,
+          ),
+        ),
+      );
+    } else if (post.fileType == 'video') {
+      // For video, you can use the video_player package
+      return Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.5,
+          maxWidth: MediaQuery.of(context).size.width * 0.7,
+        ),
+        child: VideoPlayWidget(videoUrl: post.mediaUrl!),
+      );
+    } else if (post.fileType == 'audio') {
+      // Check if the filetype is 'audio'
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: AudioPlayerWidget(audioFile: File(post.mediaUrl!)),
+      );
+    }
+    return SizedBox.shrink(); // Return an empty widget if media type is not supported
+  }
+
+
 
   Widget _buildRepliesTab() {
-    return Center(
-      child: Text('Replies Tab'),
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('comments') // Query across all comment collections
+          .where('userId', isEqualTo: _user!.uid) // Filter comments by current user
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        } else if (snapshot.data == null || snapshot.data!.docs.isEmpty) {
+          return Center(child: Text('No replied posts'));
+        } else {
+          // Extract postIds from comments
+          List postIds = snapshot.data!.docs.map((commentDoc) {
+            return commentDoc['postId'];
+          }).toList();
+
+          return Expanded(
+            child: ListView.builder(
+              padding: EdgeInsets.all(10.0),
+              itemCount: postIds.length,
+              itemBuilder: (context, index) {
+                return FutureBuilder<DocumentSnapshot>(
+                  future: FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(_user!.uid)
+                      .collection('posts')
+                      .doc(postIds[index])
+                      .get(),
+                  builder: (context, postSnapshot) {
+                    if (postSnapshot.connectionState ==
+                        ConnectionState.waiting) {
+                      return CircularProgressIndicator();
+                    } else if (!postSnapshot.hasData ||
+                        !postSnapshot.data!.exists) {
+                      return SizedBox.shrink(); // Post not found or deleted
+                    } else {
+                      // Post exists, build ListTile
+                      PostModel post = PostModel.fromMap(postSnapshot.data!.data()! as Map<String, dynamic>);
+                      return Column(
+                        children: [
+                          ListTile(
+                            title: Text(post.text),
+                            subtitle: Text(post.timestamp.toString()),
+                            // You can add more details if needed
+                          ),
+                          Divider(),
+                        ],
+                      );
+                    }
+                  },
+                );
+              },
+            ),
+          );
+        }
+      },
     );
   }
+
+
 
   Widget _buildSavedTab() {
     return Center(

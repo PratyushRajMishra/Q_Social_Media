@@ -4,14 +4,17 @@ class PostModel {
   final String id;
   final String userId;
   final String text;
+  final String? mediaUrl; // Property to store media URL
+  final String? fileType; // Property to store file type
   final Timestamp timestamp;
   final List<String> likedBy;
 
-  // New properties to track likes
   PostModel({
     required this.id,
     required this.userId,
     required this.text,
+    this.mediaUrl, // Initialize mediaUrl with null
+    this.fileType, // Initialize fileType with null
     required this.timestamp,
     required this.likedBy,
   });
@@ -21,6 +24,8 @@ class PostModel {
       id: map['id'] ?? '',
       userId: map['userId'] ?? '',
       text: map['text'] ?? '',
+      mediaUrl: map['mediaUrl'], // Assign mediaUrl from map
+      fileType: map['fileType'], // Assign fileType from map
       timestamp: map['timestamp'] ?? Timestamp.now(),
       likedBy: List<String>.from(map['likedBy'] ?? []),
     );
@@ -31,6 +36,8 @@ class PostModel {
       'id': id,
       'userId': userId,
       'text': text,
+      'mediaUrl': mediaUrl, // Include mediaUrl in map
+      'fileType': fileType, // Include fileType in map
       'timestamp': timestamp,
       'likedBy': likedBy,
     };
