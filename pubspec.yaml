@@ -55,8 +55,7 @@ dependencies:
   record:
   audioplayers:
   geolocator:
-
-
+  iconly: ^1.0.1
 
 
 

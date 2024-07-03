@@ -143,406 +143,330 @@ class _TargetProfilePageState extends State<TargetProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
-      body: _userProfilePictureUrl != null
+      body: _isLoading
+          ? Center(
+        child: CircularProgressIndicator(),
+      )
+          : _userData != null
           ? DefaultTabController(
-              length: 3,
-              child: NestedScrollView(
-                headerSliverBuilder:
-                    (BuildContext context, bool innerBoxIsScrolled) {
-                  return <Widget>[
-                    SliverAppBar(
-                      titleSpacing: 0,
-                      title: _userData != null
-                          ? Text(
-                              _userData.name.toString(),
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.tertiary,
-                                fontWeight: FontWeight.w400,
-                                letterSpacing: 1.0,
-                              ),
-                            )
-                          : Text(
-                              'Loading...',
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.tertiary,
-                                fontWeight: FontWeight.w400,
-                                letterSpacing: 1.0,
-                              ),
+        length: 3,
+        child: NestedScrollView(
+          headerSliverBuilder:
+              (BuildContext context, bool innerBoxIsScrolled) {
+            return <Widget>[
+              SliverAppBar(
+                titleSpacing: 0,
+                title: Text(
+                  _userData.name ?? 'Loading...',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.tertiary,
+                    fontWeight: FontWeight.w400,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                stretch: true,
+                backgroundColor: Theme.of(context).colorScheme.background,
+                elevation: 0,
+                pinned: true,
+                expandedHeight: MediaQuery.of(context).size.height * 0.34,
+                flexibleSpace: FlexibleSpaceBar(
+                  collapseMode: CollapseMode.parallax,
+                  background: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              left: 15,
+                              right: 15,
+                              top: 75,
+                              bottom: 0,
                             ),
-                      stretch: true,
-                      backgroundColor: Theme.of(context).colorScheme.background,
-                      elevation: 0,
-                      pinned: true,
-                      expandedHeight: MediaQuery.of(context).size.height * 0.34,
-                      flexibleSpace: FlexibleSpaceBar(
-                        collapseMode: CollapseMode.parallax,
-                        background: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            Column(
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Padding(
-                                  padding: const EdgeInsets.only(
-                                      left: 15, right: 15, top: 75, bottom: 0),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 15),
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Padding(
-                                            padding:
-                                                const EdgeInsets.only(top: 15),
-                                            child: Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.start,
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
+                                            padding: const EdgeInsets.only(left: 15),
+                                            child: Row(
                                               children: [
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                          left: 15),
-                                                  child: Row(
-                                                    children: [
-                                                      Column(
-                                                        children: [
-                                                          Text(
-                                                            _userPosts.length
-                                                                .toString(),
-                                                            style: TextStyle(
-                                                                fontSize: 18,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold),
-                                                          ),
-                                                          const SizedBox(
-                                                              height: 5),
-                                                          Text(
-                                                            'Posts',
-                                                            style: TextStyle(
-                                                                fontSize: 14,
-                                                                color: Theme.of(
-                                                                        context)
-                                                                    .colorScheme
-                                                                    .tertiary),
-                                                          ),
-                                                        ],
+                                                Column(
+                                                  children: [
+                                                    Text(
+                                                      _userPosts.length.toString(),
+                                                      style: TextStyle(
+                                                        fontSize: 18,
+                                                        fontWeight: FontWeight.bold,
                                                       ),
-                                                      const SizedBox(width: 30),
-                                                      InkWell(
-                                                        onTap: () {
-                                                          Navigator.push(
-                                                              context,
-                                                              MaterialPageRoute(
-                                                                  builder:
-                                                                      (context) =>
-                                                                      FollowersListPage(userId: _userData.uid.toString(),)));
-                                                        },
-                                                        child: Column(
-                                                          children: [
-                                                            Text(
-                                                              _userData.followers!
-                                                                  .length
-                                                                  .toString(),
-                                                              style: TextStyle(
-                                                                  fontSize: 18,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold),
-                                                            ),
-                                                            const SizedBox(
-                                                                height: 5),
-                                                            Text(
-                                                              "Followers",
-                                                              style: TextStyle(
-                                                                  fontSize: 14,
-                                                                  color: Theme.of(
-                                                                          context)
-                                                                      .colorScheme
-                                                                      .tertiary),
-                                                            ),
-                                                          ],
+                                                    ),
+                                                    const SizedBox(height: 5),
+                                                    Text(
+                                                      'Posts',
+                                                      style: TextStyle(
+                                                        fontSize: 14,
+                                                        color: Theme.of(context).colorScheme.tertiary,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                const SizedBox(width: 30),
+                                                InkWell(
+                                                  onTap: () {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (context) => FollowersListPage(
+                                                          userId: _userData.uid.toString(),
                                                         ),
                                                       ),
-                                                      const SizedBox(width: 30),
-                                                      InkWell(
-                                                        onTap: () {
-                                                          Navigator.push(
-                                                              context,
-                                                              MaterialPageRoute(
-                                                                  builder:
-                                                                      (context) =>
-                                                                      FollowingListPage(userId: _userData.uid.toString(),)));
-                                                        },
-                                                        child: Column(
-                                                          children: [
-                                                            Text(
-                                                              _userData.following!
-                                                                  .length
-                                                                  .toString(),
-                                                              style: TextStyle(
-                                                                  fontSize: 18,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold),
-                                                            ),
-                                                            const SizedBox(
-                                                                height: 5),
-                                                            Text(
-                                                              'Following',
-                                                              style: TextStyle(
-                                                                  fontSize: 14,
-                                                                  color: Theme.of(
-                                                                          context)
-                                                                      .colorScheme
-                                                                      .tertiary),
-                                                            ),
-                                                          ],
+                                                    );
+                                                  },
+                                                  child: Column(
+                                                    children: [
+                                                      Text(
+                                                        _userData.followers!.length.toString(),
+                                                        style: TextStyle(
+                                                          fontSize: 18,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 5),
+                                                      Text(
+                                                        "Followers",
+                                                        style: TextStyle(
+                                                          fontSize: 14,
+                                                          color: Theme.of(context).colorScheme.tertiary,
                                                         ),
                                                       ),
                                                     ],
                                                   ),
                                                 ),
-                                                const SizedBox(height: 10),
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                          left: 3),
-                                                  child: Text(
-                                                    _userData?.email ??
-                                                        _userData.phoneNumber ??
-                                                        '',
-                                                    style: TextStyle(
-                                                        fontSize: 16,
-                                                        color: Theme.of(context)
-                                                            .colorScheme
-                                                            .secondary),
+                                                const SizedBox(width: 30),
+                                                InkWell(
+                                                  onTap: () {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (context) => FollowingListPage(
+                                                          userId: _userData.uid.toString(),
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
+                                                  child: Column(
+                                                    children: [
+                                                      Text(
+                                                        _userData.following!.length.toString(),
+                                                        style: TextStyle(
+                                                          fontSize: 18,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 5),
+                                                      Text(
+                                                        'Following',
+                                                        style: TextStyle(
+                                                          fontSize: 14,
+                                                          color: Theme.of(context).colorScheme.tertiary,
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
-                                                ),
-                                                SizedBox(
-                                                  height: 10,
-                                                ),
-                                                Row(
-                                                  children: [
-                                                    Icon(
-                                                      Icons
-                                                          .location_on_outlined,
-                                                      size: 15,
-                                                      color: Theme.of(context)
-                                                          .colorScheme
-                                                          .secondary,
-                                                    ),
-                                                    SizedBox(
-                                                      width: 2,
-                                                    ),
-                                                    Text(
-                                                      _userData.location
-                                                          .toString(),
-                                                      style: TextStyle(
-                                                          color:
-                                                              Theme.of(context)
-                                                                  .colorScheme
-                                                                  .secondary,
-                                                          fontSize: 16),
-                                                    ),
-                                                  ],
                                                 ),
                                               ],
                                             ),
                                           ),
-                                          CircleAvatar(
-                                            radius: 50,
-                                            backgroundColor: Colors.transparent,
-                                            child: _userProfilePictureUrl !=
-                                                    null
-                                                ? _userProfilePictureUrl!
-                                                        .startsWith('http')
-                                                    ? CachedNetworkImage(
-                                                        imageUrl:
-                                                            _userProfilePictureUrl!,
-                                                        imageBuilder: (context,
-                                                                imageProvider) =>
-                                                            CircleAvatar(
-                                                          backgroundImage:
-                                                              imageProvider,
-                                                          radius: 50,
-                                                        ),
-                                                        placeholder: (context,
-                                                                url) =>
-                                                            Center(
-                                                                child:
-                                                                    const CircularProgressIndicator()),
-                                                        errorWidget: (context,
-                                                                url, error) =>
-                                                            const Icon(
-                                                                Icons.error),
-                                                      )
-                                                    : (_userProfilePictureUrl ==
-                                                                'DEFAULT_IMAGE_URL' ||
-                                                            _userProfilePictureUrl!
-                                                                .isEmpty)
-                                                        ? Icon(
-                                                            Icons
-                                                                .account_circle,
-                                                            size: 100,
-                                                            color: Theme.of(
-                                                                    context)
-                                                                .colorScheme
-                                                                .tertiary,
-                                                          )
-                                                        : CircleAvatar(
-                                                            backgroundImage:
-                                                                NetworkImage(
-                                                                    _userProfilePictureUrl!),
-                                                            radius: 50,
-                                                          )
-                                                : Icon(
-                                                    Icons.account_circle,
-                                                    size: 100,
-                                                    color: Theme.of(context)
-                                                        .colorScheme
-                                                        .tertiary,
-                                                  ),
+                                          const SizedBox(height: 10),
+                                          Padding(
+                                            padding: const EdgeInsets.only(left: 3),
+                                            child: Text(
+                                              _userData?.email ?? _userData.phoneNumber ?? '',
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                color: Theme.of(context).colorScheme.secondary,
+                                              ),
+                                            ),
+                                          ),
+                                          SizedBox(height: 10),
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.location_on_outlined,
+                                                size: 15,
+                                                color: Theme.of(context).colorScheme.secondary,
+                                              ),
+                                              SizedBox(width: 2),
+                                              Text(
+                                                _userData.location.toString(),
+                                                style: TextStyle(
+                                                  color: Theme.of(context).colorScheme.secondary,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ],
                                       ),
-                                      SizedBox(
-                                        height: 10,
-                                      ),
-                                      GestureDetector(
-                                        onTap: () {
-                                          launchUrl(
-                                              Uri.parse(
-                                                  _userData.website.toString()),
-                                              mode:
-                                                  LaunchMode.inAppBrowserView);
-                                        },
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              Icons.link_outlined,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .secondary,
-                                              size: 16,
-                                            ),
-                                            SizedBox(
-                                              width: 5,
-                                            ),
-                                            Text(
-                                              _userData.website.toString(),
-                                              style: TextStyle(
-                                                  color: Colors.blue,
-                                                  fontSize: 16,
-                                                  letterSpacing: 0.7),
-                                            ),
-                                          ],
+                                    ),
+                                    CircleAvatar(
+                                      radius: 50,
+                                      backgroundColor: Colors.transparent,
+                                      child: _userProfilePictureUrl != null
+                                          ? _userProfilePictureUrl!.startsWith('http')
+                                          ? CachedNetworkImage(
+                                        imageUrl: _userProfilePictureUrl.toString(),
+                                        imageBuilder: (context, imageProvider) => CircleAvatar(
+                                          backgroundImage: imageProvider,
+                                          radius: 50,
                                         ),
+                                        placeholder: (context, url) => Center(child: CircularProgressIndicator()),
+                                        errorWidget: (context, url, error) => Icon(Icons.error),
+                                      )
+                                          : (_userProfilePictureUrl == 'DEFAULT_IMAGE_URL' || _userProfilePictureUrl!.isEmpty)
+                                          ? Icon(
+                                        Icons.account_circle,
+                                        size: 100,
+                                        color: Theme.of(context).colorScheme.tertiary,
+                                      )
+                                          : CircleAvatar(
+                                        backgroundImage: NetworkImage(_userProfilePictureUrl.toString()),
+                                        radius: 50,
+                                      )
+                                          : Icon(
+                                        Icons.account_circle,
+                                        size: 100,
+                                        color: Theme.of(context).colorScheme.tertiary,
                                       ),
-                                      SizedBox(
-                                        height: 10,
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 10),
+                                GestureDetector(
+                                  onTap: () {
+                                    launchUrl(Uri.parse(_userData.website.toString()), mode: LaunchMode.inAppBrowserView);
+                                  },
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.link_outlined,
+                                        color: Theme.of(context).colorScheme.secondary,
+                                        size: 16,
                                       ),
+                                      SizedBox(width: 5),
                                       Text(
-                                        _userData.bio.toString(),
+                                        _userData.website.toString(),
                                         style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w400,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary),
-                                      ),
-                                      const SizedBox(height: 20),
-                                      SizedBox(
-                                        height: 30,
-                                        width: double.infinity,
-                                        child: OutlinedButton(
-                                          onPressed: () {
-                                            followUser(widget.userId,
-                                                _isFollowing, currentUser?.uid);
-                                          },
-                                          child: Text(
-                                            _isFollowing
-                                                ? 'Unfollow'
-                                                : 'Follow',
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
+                                          color: Colors.blue,
+                                          fontSize: 16,
+                                          letterSpacing: 0.7,
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
+                                SizedBox(height: 10),
+                                Text(
+                                  _userData.bio.toString(),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w400,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
+                                ),
+                                SizedBox(height: 20),
+                                SizedBox(
+                                  height: 30,
+                                  width: double.infinity,
+                                  child: OutlinedButton(
+                                    onPressed: () {
+                                      followUser(widget.userId, _isFollowing, currentUser?.uid);
+                                    },
+                                    child: Text(
+                                      _isFollowing ? 'Unfollow' : 'Follow',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ),
-                    SliverPersistentHeader(
-                      delegate: MySliverPersistentHeaderDelegate(
-                        TabBar(
-                          labelColor: Theme.of(context).colorScheme.tertiary,
-                          unselectedLabelColor:
-                              Theme.of(context).colorScheme.secondary,
-                          indicatorColor: Colors.blue,
-                          indicatorSize: TabBarIndicatorSize.tab,
-                          indicatorWeight: 2.5,
-                          tabs: const [
-                            Tab(
-                              child: Text(
-                                'Posts',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            Tab(
-                              child: Text(
-                                'Replies',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            Tab(
-                              child: Text(
-                                'Saved',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      pinned: true,
-                    ),
-                  ];
-                },
-                body: TabBarView(
-                  children: [
-                    _buildPostsTab(),
-                    _buildRepliesTab(),
-                    _buildSavedTab(),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            )
+              SliverPersistentHeader(
+                delegate: MySliverPersistentHeaderDelegate(
+                  TabBar(
+                    labelColor: Theme.of(context).colorScheme.tertiary,
+                    unselectedLabelColor: Theme.of(context).colorScheme.secondary,
+                    indicatorColor: Colors.blue,
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    indicatorWeight: 2.5,
+                    tabs: const [
+                      Tab(
+                        child: Text(
+                          'Posts',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Tab(
+                        child: Text(
+                          'Replies',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Tab(
+                        child: Text(
+                          'Saved',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                pinned: true,
+              ),
+            ];
+          },
+          body: TabBarView(
+            children: [
+              _buildPostsTab(), // Implement _buildPostsTab(), _buildRepliesTab(), _buildSavedTab() methods
+              _buildRepliesTab(),
+              _buildSavedTab(),
+            ],
+          ),
+        ),
+      )
           : Center(
-              child: CircularProgressIndicator(),
-            ),
+        child: Text('User data not available'),
+      ),
     );
+
   }
 
   Widget _buildPostsTab() {
@@ -636,8 +560,13 @@ class _TargetProfilePageState extends State<TargetProfilePage> {
                             Align(
                               alignment: Alignment.topLeft,
                               child: CircleAvatar(
-                                backgroundImage:
-                                NetworkImage(_userProfilePictureUrl ?? ''),
+                                backgroundImage: _userProfilePictureUrl != null && _userProfilePictureUrl!.isNotEmpty
+                                    ? NetworkImage(_userProfilePictureUrl!)
+                                    : null,
+                                backgroundColor: Colors.transparent,
+                                child: _userProfilePictureUrl == null || _userProfilePictureUrl!.isEmpty
+                                    ? Icon(Icons.account_circle, size: 45, color: Theme.of(context).colorScheme.tertiary)
+                                    : null,
                               ),
                             ),
                             SizedBox(width: 10),

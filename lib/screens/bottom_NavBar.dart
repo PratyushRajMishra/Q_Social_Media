@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:iconly/iconly.dart';
 import 'package:q/screens/tabs/Home.dart';
 import 'package:q/screens/tabs/Message.dart';
 import 'package:q/screens/tabs/Notification.dart';
@@ -31,23 +32,30 @@ class _BottomNavbarPageState extends State<BottomNavbarPage> {
   ];
 
   final List<List<IconData>> _tabIcons = [
-    [Icons.home, Icons.home_outlined],
-    [Icons.search, Icons.search_outlined],
-    [Icons.edit_note_outlined, Icons.edit_note],
-    [Icons.notifications, Icons.notifications_outlined],
-    [Icons.mail, Icons.mail_outline_outlined],
+    [IconlyBold.home, IconlyLight.home],
+    [IconlyLight.search, IconlyLight.search],
+    [IconlyBold.plus, IconlyLight.plus],
+    [IconlyBold.notification, IconlyLight.notification],
+    [IconlyBold.message, IconlyLight.message],
   ];
 
   @override
   Widget build(BuildContext context) {
+    // Define the colors for selected and unselected icons
+    Color selectedColor = Theme.of(context).colorScheme.primary;
+    Color unselectedColor = Colors.grey;
+
+
     return Scaffold(
       key: _scaffoldKey,
       body: _tabs[_selectedIndex],
       bottomNavigationBar: BottomAppBar(
-        elevation: 0,
+        elevation: 10.0,
         color: Theme.of(context).colorScheme.background,
         shape: const CircularNotchedRectangle(),
         notchMargin: 10.0,
+        height: 50,
+        clipBehavior: Clip.none,
         child: Row(
           mainAxisSize: MainAxisSize.max,
           mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -56,6 +64,7 @@ class _BottomNavbarPageState extends State<BottomNavbarPage> {
               icon: Icon(
                 _selectedIndex == index ? _tabIcons[index][0] : _tabIcons[index][1],
                 size: 28,
+                color: _selectedIndex == index ? selectedColor : unselectedColor,
               ),
               onPressed: () {
                 if (index == 2) {
@@ -65,7 +74,6 @@ class _BottomNavbarPageState extends State<BottomNavbarPage> {
                       PostPage(audioPath: audioPath),
                     ),
                   );
-
                 } else {
                   _onTabTapped(index);
                 }
