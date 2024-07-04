@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:q/screens/auth/dashBoard.dart';
 
 class YourAccountPage extends StatefulWidget {
@@ -20,18 +21,24 @@ class _YourAccountPageState extends State<YourAccountPage> {
 
   void _handleLogout() async {
     try {
-      // Sign out user from Firebase Authentication
+      // Sign out user from Firebase Authentication and Google
       await FirebaseAuth.instance.signOut();
+      await GoogleSignIn().signOut();
 
       print("${_user?.displayName} logged out");
 
       // Navigate to the dashboard page
       Navigator.popUntil(context, (route) => route.isFirst);
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => DashBoardPage()),
+        MaterialPageRoute(builder: (context) => const DashBoardPage()),
       );
     } catch (e) {
       print("Error logging out: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error logging out: $e'),
+        ),
+      );
     }
   }
 

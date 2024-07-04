@@ -12,29 +12,34 @@ class GoogleAuth extends StatelessWidget {
 
   Future<void> signInWithGoogle(BuildContext context) async {
     try {
+      // Sign out from Google and Firebase to ensure fresh login
+      await FirebaseAuth.instance.signOut();
+      await GoogleSignIn().disconnect(); // Ensure the account picker shows up
+
       // Sign in with Google
       GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      GoogleSignInAuthentication? googleAuth = await googleUser?.authentication;
+      if (googleUser == null) {
+        // User canceled the sign-in
+        return;
+      }
+
+      GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
       // Get the Google authentication credentials
       AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth?.accessToken,
-        idToken: googleAuth?.idToken,
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
       );
 
       // Sign in to Firebase with the Google credentials
       UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
 
-      // Print user's display name
-      print(userCredential.user?.displayName);
-
       // Save user data to Firebase Firestore
       if (userCredential.user != null) {
         UserModel userModel = UserModel(
           uid: userCredential.user!.uid,
-          name: userCredential.user!.displayName ?? '', // Providing a default value if displayName is null
-          email: userCredential.user!.email ?? '', // Providing a default value if email is null
-          // You may add more fields to the UserModel here
+          name: userCredential.user!.displayName ?? '',
+          email: userCredential.user!.email ?? '',
         );
         await FirebaseHelper.saveUserModel(userModel); // Save user model to Firestore
       }
@@ -48,9 +53,8 @@ class GoogleAuth extends StatelessWidget {
             builder: (context) => BottomNavbarPage(
               userModel: UserModel(
                 uid: userCredential.user!.uid,
-                name: userCredential.user!.displayName ?? '', // Providing a default value if displayName is null
-                email: userCredential.user!.email ?? '', // Providing a default value if email is null
-                // You may provide other default values if needed
+                name: userCredential.user!.displayName ?? '',
+                email: userCredential.user!.email ?? '',
               ),
             ),
           ),
@@ -58,7 +62,11 @@ class GoogleAuth extends StatelessWidget {
       }
     } catch (e) {
       print('Error signing in with Google: $e');
-      // Handle sign-in errors
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error signing in with Google: $e'),
+        ),
+      );
     }
   }
 
@@ -71,7 +79,11 @@ class GoogleAuth extends StatelessWidget {
           // Show a loading indicator while checking the authentication state
           return const Scaffold(
             body: Center(
-              child: CustomCircularProgressIndicator(imagePath: 'assets/logo_dark.png',  size: 120.0, darkModeImagePath: 'assets/logo_light.png',),
+              child: CustomCircularProgressIndicator(
+                imagePath: 'assets/logo_dark.png',
+                size: 120.0,
+                darkModeImagePath: 'assets/logo_light.png',
+              ),
             ),
           );
         } else if (snapshot.hasError) {
@@ -99,7 +111,18 @@ class GoogleAuth extends StatelessWidget {
                     // Show loading indicator while fetching user model
                     return Scaffold(
                       body: Center(
-                        child: CustomCircularProgressIndicator(imagePath: 'assets/logo_dark.png',  size: 120.0, darkModeImagePath: 'assets/logo_light.png',),
+                        child: CustomCircularProgressIndicator(
+                          imagePath: 'assets/logo_dark.png',
+                          size: 120.0,
+                          darkModeImagePath: 'assets/logo_light.png',
+                        ),
+                      ),
+                    );
+                  } else if (userModelSnapshot.hasError) {
+                    // Handle error while fetching user model
+                    return Scaffold(
+                      body: Center(
+                        child: Text('Error fetching user model: ${userModelSnapshot.error}'),
                       ),
                     );
                   } else {
@@ -109,7 +132,7 @@ class GoogleAuth extends StatelessWidget {
                       return BottomNavbarPage(userModel: userModel);
                     } else {
                       // User model not found, handle accordingly
-                      return const DashBoardPage(); // Example redirection to dashboard page
+                      return const DashBoardPage();
                     }
                   }
                 },

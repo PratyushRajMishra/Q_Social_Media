@@ -42,7 +42,7 @@ class MyApp extends StatelessWidget {
         future: isLoggedIn(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Scaffold(
+            return const Scaffold(
               body: Center(
                 child: CircularProgressIndicator(),
               ),
@@ -60,9 +60,13 @@ class MyApp extends StatelessWidget {
                 future: getUserModel(),
                 builder: (context, userSnapshot) {
                   if (userSnapshot.connectionState == ConnectionState.waiting) {
-                    return Scaffold(
+                    return const Scaffold(
                       body: Center(
-                        child: CustomCircularProgressIndicator(imagePath: 'assets/logo_dark.png',  size: 120.0, darkModeImagePath: 'assets/logo_light.png',),
+                        child: CustomCircularProgressIndicator(
+                          imagePath: 'assets/logo_dark.png',
+                          size: 120.0,
+                          darkModeImagePath: 'assets/logo_light.png',
+                        ),
                       ),
                     );
                   } else if (userSnapshot.hasError) {
@@ -76,7 +80,7 @@ class MyApp extends StatelessWidget {
                     if (userModel != null) {
                       return BottomNavbarPage(userModel: userModel);
                     } else {
-                      return DashBoardPage();
+                      return const DashBoardPage();
                     }
                   }
                 },
