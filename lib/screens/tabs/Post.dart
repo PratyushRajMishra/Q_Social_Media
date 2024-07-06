@@ -685,8 +685,8 @@ class _PostPageState extends State<PostPage> {
         };
 
         DocumentReference postRef = await firestore
-            .collection('users')
-            .doc(_user?.uid)
+            // .collection('users')
+            // .doc(_user?.uid)
             .collection('posts')
             .add(postData);
 
@@ -703,8 +703,8 @@ class _PostPageState extends State<PostPage> {
         );
 
         await firestore
-            .collection('users')
-            .doc(_user?.uid)
+            // .collection('users')
+            // .doc(_user?.uid)
             .collection('posts')
             .doc(postId)
             .set(post.toMap());

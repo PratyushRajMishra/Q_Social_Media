@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:q/screens/write_message.dart';
+import 'package:q/Messages/userList.dart';
 
 import '../Setting.dart';
 import '../UserProfile.dart';
@@ -53,7 +53,7 @@ class _MessagePageState extends State<MessagePage> {
                 Navigator.push(
                   context,
                   CupertinoPageRoute(
-                    builder: (context) => const WriteMessagePage(),
+                    builder: (context) => const MessageUserListPage(),
                   ),
                 );
               },

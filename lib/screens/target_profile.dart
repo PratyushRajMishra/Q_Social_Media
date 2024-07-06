@@ -92,9 +92,10 @@ class _TargetProfilePageState extends State<TargetProfilePage> {
     try {
       QuerySnapshot<Map<String, dynamic>> postSnapshot = await FirebaseFirestore
           .instance
-          .collection('users')
-          .doc(widget.userId)
+          // .collection('users')
+          // .doc(widget.userId)
           .collection('posts')
+          .where('userId', isEqualTo: widget.userId)
           .get();
       setState(() {
         _userPosts = postSnapshot.docs
@@ -518,7 +519,9 @@ class _TargetProfilePageState extends State<TargetProfilePage> {
                           try {
                             // Fetch comments data and liked data simultaneously
                             final commentsSnapshotFuture = FirebaseFirestore.instance.collection('comments').where('postId', isEqualTo: _userPosts[index].id).get();
-                            final likedSnapshotFuture = FirebaseFirestore.instance.collection('users').doc(_userData.uid).collection('posts').doc(_userPosts[index].id).get();
+                            final likedSnapshotFuture = FirebaseFirestore.instance
+                               // .collection('users').doc(_userData.uid)
+                                .collection('posts').doc(_userPosts[index].id).get();
 
                             // Wait for both futures to complete
                             final List<dynamic> comments = (await commentsSnapshotFuture).docs.map((commentDoc) => commentDoc.data()).toList();
@@ -798,8 +801,8 @@ class _TargetProfilePageState extends State<TargetProfilePage> {
               itemBuilder: (context, index) {
                 return FutureBuilder<DocumentSnapshot>(
                   future: FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(_userData.uid)
+                      // .collection('users')
+                      // .doc(_userData.uid)
                       .collection('posts')
                       .doc(postIds[index])
                       .get(),
