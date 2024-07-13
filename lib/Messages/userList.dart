@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Import FirebaseAuth to get the current user
+
 import 'package:q/Messages/userMessage.dart';
 
 class MessageUserListPage extends StatefulWidget {
@@ -13,10 +15,15 @@ class MessageUserListPage extends StatefulWidget {
 class _MessageUserListPageState extends State<MessageUserListPage> {
   TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
+  String? _currentUserId;
 
   @override
   void initState() {
     super.initState();
+
+    // Get the current user's ID
+    _currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text;
@@ -109,15 +116,17 @@ class _MessageUserListPageState extends State<MessageUserListPage> {
                   return Center(child: Text('No users found.'));
                 }
 
-                // Filter users based on the search query
+                // Filter users based on the search query and exclude current user
                 var filteredUsers = snapshot.data!.docs.where((doc) {
                   var userData = doc.data() as Map<String, dynamic>;
+                  var userId = doc.id;
                   var userName = userData['name']?.toLowerCase() ?? '';
                   var userEmail = userData['email']?.toLowerCase() ?? '';
                   var userPhoneNumber = userData['phoneNumber']?.toLowerCase() ?? '';
                   var searchLower = _searchQuery.toLowerCase();
 
-                  return userName.contains(searchLower) || userEmail.contains(searchLower) || userPhoneNumber.contains(searchLower);
+                  return userId != _currentUserId &&
+                      (userName.contains(searchLower) || userEmail.contains(searchLower) || userPhoneNumber.contains(searchLower));
                 }).toList();
 
                 return ListView.builder(
@@ -126,9 +135,8 @@ class _MessageUserListPageState extends State<MessageUserListPage> {
                     var userData = filteredUsers[index].data() as Map<String, dynamic>;
                     String userId = filteredUsers[index].id;
                     String userName = userData['name'] ?? '';
-                    var currentUser; // Define or get the current user
                     bool isFollowing = userData['followers'] != null &&
-                        userData['followers'].contains(currentUser?.uid);
+                        userData['followers'].contains(_currentUserId);
 
                     return ListTile(
                       leading: CircleAvatar(

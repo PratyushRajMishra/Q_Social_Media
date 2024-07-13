@@ -3,13 +3,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:q/Messages/userList.dart';
-
+import '../../Messages/userMessage.dart';
 import '../Setting.dart';
 import '../UserProfile.dart';
 
 class MessagePage extends StatefulWidget {
-  const MessagePage({Key? key});
+  const MessagePage({Key? key}) : super(key: key);
 
   @override
   State<MessagePage> createState() => _MessagePageState();
@@ -17,74 +18,381 @@ class MessagePage extends StatefulWidget {
 
 class _MessagePageState extends State<MessagePage> {
   bool isSearchBarVisible = false;
+  String searchQuery = '';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       appBar: isSearchBarVisible ? buildSearchAppBar() : buildDefaultAppBar(),
-      body: isSearchBarVisible
-          ? buildSearchBody()
-          : buildDefaultBody(), // Show either search or default body
+      body: isSearchBarVisible ? buildSearchBody() : buildDefaultBody(),
     );
   }
 
   Widget buildDefaultBody() {
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Welcome to your inbox!',
-              style: TextStyle(fontSize: 35, fontWeight: FontWeight.w900, color: Theme.of(context).colorScheme.primary),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Drop a line, share posts and more with private\n'
-                  'conversations between you and others on Q.',
-              style: TextStyle(color: Theme.of(context).colorScheme.secondary, fontWeight: FontWeight.w400),
-            ),
-            const SizedBox(height: 35),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  CupertinoPageRoute(
-                    builder: (context) => const MessageUserListPage(),
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('messages')
+          .where('participants', arrayContains: FirebaseAuth.instance.currentUser!.uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Welcome to your inbox!',
+                  style: TextStyle(fontSize: 35, fontWeight: FontWeight.w900, color: Theme.of(context).colorScheme.primary),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Drop a line, share posts and more with private\n'
+                      'conversations between you and others on Q.',
+                  style: TextStyle(color: Theme.of(context).colorScheme.secondary, fontWeight: FontWeight.w400),
+                ),
+                const SizedBox(height: 35),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      CupertinoPageRoute(
+                        builder: (context) => const MessageUserListPage(),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30.0),
+                    ),
                   ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 13),
+                    child: Text(
+                      'Write a message',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final messages = snapshot.data!.docs;
+        final userIds = messages.map((doc) => doc['participants']).expand((i) => i).toSet();
+        userIds.remove(FirebaseAuth.instance.currentUser!.uid);
+
+        return Stack(
+          children: [
+            ListView.builder(
+              itemCount: userIds.length,
+              itemBuilder: (context, index) {
+                return FutureBuilder<DocumentSnapshot>(
+                  future: FirebaseFirestore.instance.collection('users').doc(userIds.elementAt(index)).get(),
+                  builder: (context, userSnapshot) {
+                    if (userSnapshot.connectionState == ConnectionState.waiting) {
+                      return Center(child: CircularProgressIndicator());
+                    }
+
+                    if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+                      return Container();
+                    }
+
+                    final userData = userSnapshot.data!.data() as Map<String, dynamic>;
+                    final userId = userIds.elementAt(index);
+                    final userName = userData['name'] ?? 'Unknown User';
+
+                    return FutureBuilder<QuerySnapshot>(
+                      future: FirebaseFirestore.instance.collection('messages')
+                          .where('participants', arrayContains: userId)
+                          .orderBy('timestamp', descending: true)
+                          .limit(1)
+                          .get(),
+                      builder: (context, messageSnapshot) {
+                        String lastMessage = 'Loading...';
+                        String lastMessageTime = '';
+                        Widget lastMessageWidget = Text(lastMessage);
+
+                        if (messageSnapshot.hasData && messageSnapshot.data!.docs.isNotEmpty) {
+                          final lastDoc = messageSnapshot.data!.docs.first;
+                          final mediaType = lastDoc['mediaType'];
+
+                          lastMessageTime = DateFormat('hh:mm a').format(
+                            (lastDoc['timestamp'] as Timestamp).toDate(),
+                          );
+
+                          if (mediaType == 0) {
+                            lastMessage = lastDoc['text'] ?? 'Loading...';
+                            lastMessageWidget = Text(lastMessage);
+                          } else if (mediaType == 1) {
+                            lastMessageWidget = Text('You sent a photo');
+                          } else if (mediaType == 2) {
+                            lastMessageWidget = Text('You sent a video');
+                          }
+                        }
+
+                        return ListTile(
+                          leading: CircleAvatar(
+                            radius: 23,
+                            backgroundImage: CachedNetworkImageProvider(userData['profile'] ?? ''),
+                            backgroundColor: Colors.grey,
+                          ),
+                          title: Text(userName),
+                          subtitle: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              lastMessageWidget,
+                              Text(
+                                lastMessageTime,
+                                style: TextStyle(color: Colors.grey, fontSize: 10),
+                              ),
+                            ],
+                          ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              CupertinoPageRoute(
+                                builder: (context) => UserMessagePage(
+                                  userId: userId,
+                                  userName: userName,
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    );
+                  },
                 );
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30.0),
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 13),
-                child: Text(
-                  'Write a message',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-                ),
+            ),
+            Positioned(
+              bottom: 20,
+              right: 16,
+              child: FloatingActionButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    CupertinoPageRoute(
+                      builder: (context) => const MessageUserListPage(),
+                    ),
+                  );
+                },
+                child: Icon(CupertinoIcons.plus_bubble, size: 25, color: Colors.white),
+                backgroundColor: Colors.blue,
               ),
             ),
-
-
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 
-
   Widget buildSearchBody() {
-    return Center(
-        child: Text('Try searching for people, groups or messages',
-        style: TextStyle(color: Colors.grey.shade400, fontSize: 15, fontWeight: FontWeight.w600),));
+    return Column(
+      children: [
+        // Check if search query is empty
+        if (searchQuery.isEmpty)
+          Center(
+            child: Text(
+              'Try searching for people or messages',
+              style: TextStyle(color: Colors.blueGrey.shade300, fontSize: 15, fontWeight: FontWeight.w500),
+            ),
+          )
+        else ...[
+          // User Search
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('messages')
+                .where('participants', arrayContains: FirebaseAuth.instance.currentUser!.uid)
+                .snapshots(),
+            builder: (context, messageSnapshot) {
+              if (messageSnapshot.connectionState == ConnectionState.waiting) {
+                return Center(child: CircularProgressIndicator());
+              }
+
+              if (messageSnapshot.hasError) {
+                return Center(child: Text('Error: ${messageSnapshot.error}'));
+              }
+
+              final messages = messageSnapshot.data!.docs;
+              final participantIds = messages
+                  .expand((doc) => (doc['participants'] as List)
+                  .where((id) => id != FirebaseAuth.instance.currentUser!.uid))
+                  .toSet()
+                  .toList();
+
+              return FutureBuilder<QuerySnapshot>(
+                future: FirebaseFirestore.instance
+                    .collection('users')
+                    .where(FieldPath.documentId, whereIn: participantIds)
+                    .get(),
+                builder: (context, userSnapshot) {
+                  if (userSnapshot.connectionState == ConnectionState.waiting) {
+                    return Center(child: CircularProgressIndicator());
+                  }
+
+                  if (userSnapshot.hasError) {
+                    return Center(child: Text('Error: ${userSnapshot.error}'));
+                  }
+
+                  final users = userSnapshot.data!.docs;
+                  final filteredUsers = users.where((doc) {
+                    final userData = doc.data() as Map<String, dynamic>;
+                    final userId = doc.id;
+                    final userName = userData['name'] ?? '';
+                    return userName.toLowerCase().contains(searchQuery.toLowerCase()) &&
+                        userId != FirebaseAuth.instance.currentUser!.uid; // Exclude current user
+                  }).toList();
+
+                  return filteredUsers.isEmpty
+                      ? Center(child: Text('No users found.'))
+                      : Expanded(
+                    child: ListView.builder(
+                      itemCount: filteredUsers.length,
+                      itemBuilder: (context, index) {
+                        final userData = filteredUsers[index].data() as Map<String, dynamic>;
+                        final userId = filteredUsers[index].id;
+                        final userName = userData['name'] ?? 'Unknown User';
+
+                        return FutureBuilder<QuerySnapshot>(
+                          future: FirebaseFirestore.instance.collection('messages')
+                              .where('participants', arrayContains: userId)
+                              .orderBy('timestamp', descending: true)
+                              .limit(1)
+                              .get(),
+                          builder: (context, messageSnapshot) {
+                            String lastMessage = 'No messages yet';
+
+                            if (messageSnapshot.connectionState == ConnectionState.waiting) {
+                              return ListTile(
+                                leading: CircleAvatar(
+                                  radius: 23,
+                                  backgroundImage: CachedNetworkImageProvider(userData['profile'] ?? ''),
+                                  backgroundColor: Colors.grey,
+                                ),
+                                title: Text(userName),
+                                subtitle: Text('Loading last message...'),
+                              );
+                            }
+
+                            if (messageSnapshot.hasData && messageSnapshot.data!.docs.isNotEmpty) {
+                              final lastDoc = messageSnapshot.data!.docs.first;
+                              lastMessage = lastDoc['text'] ?? 'No messages yet';
+                            }
+
+                            return ListTile(
+                              leading: CircleAvatar(
+                                radius: 23,
+                                backgroundImage: CachedNetworkImageProvider(userData['profile'] ?? ''),
+                                backgroundColor: Colors.grey,
+                              ),
+                              title: Text(userName),
+                              subtitle: Text(lastMessage),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  CupertinoPageRoute(
+                                    builder: (context) => UserMessagePage(
+                                      userId: userId,
+                                      userName: userName,
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+
+          // Message Search
+          FutureBuilder<QuerySnapshot>(
+            future: FirebaseFirestore.instance
+                .collection('messages')
+                .where('participants', arrayContains: FirebaseAuth.instance.currentUser!.uid)
+                .get(),
+            builder: (context, messageSnapshot) {
+              if (messageSnapshot.connectionState == ConnectionState.waiting) {
+                return Center(child: CircularProgressIndicator());
+              }
+
+              if (messageSnapshot.hasError) {
+                return Center(child: Text('Error: ${messageSnapshot.error}'));
+              }
+
+              final messages = messageSnapshot.data!.docs;
+              final filteredMessages = messages.where((doc) {
+                final text = doc['text'] ?? '';
+                return text.toLowerCase().contains(searchQuery.toLowerCase());
+              }).toList();
+
+              return Expanded(
+                child: ListView.builder(
+                  itemCount: filteredMessages.length,
+                  itemBuilder: (context, index) {
+                    final messageData = filteredMessages[index].data() as Map<String, dynamic>;
+                    final participants = messageData['participants'] as List;
+                    final otherUserId = participants.firstWhere((id) => id != FirebaseAuth.instance.currentUser!.uid);
+                    final messageTime = DateFormat('hh:mm a').format((messageData['timestamp'] as Timestamp).toDate());
+
+                    return FutureBuilder<DocumentSnapshot>(
+                      future: FirebaseFirestore.instance.collection('users').doc(otherUserId).get(),
+                      builder: (context, userSnapshot) {
+                        if (userSnapshot.connectionState == ConnectionState.waiting) {
+                          return Container();
+                        }
+
+                        final userData = userSnapshot.data!.data() as Map<String, dynamic>;
+                        final userName = userData['name'] ?? 'Unknown User';
+
+                        return ListTile(
+                          title: Text(messageData['text'] ?? '', style: TextStyle(fontWeight: FontWeight.w500),),
+                          subtitle: Text('by: $userName'),
+                          trailing: Text(
+                            messageTime,
+                            style: TextStyle(color: Colors.grey, fontSize: 10),
+                          ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              CupertinoPageRoute(
+                                builder: (context) => UserMessagePage(
+                                  userId: otherUserId,
+                                  userName: userName,
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ],
+      ],
+    );
   }
+
 
   AppBar buildDefaultAppBar() {
     User? _user = FirebaseAuth.instance.currentUser;
@@ -102,21 +410,19 @@ class _MessagePageState extends State<MessagePage> {
             stream: FirebaseFirestore.instance.collection('users').doc(_user?.uid).snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return CircularProgressIndicator(); // Display a loading indicator while fetching user data
+                return CircularProgressIndicator();
               }
 
               if (snapshot.hasError) {
-                return Icon(Icons.error); // Display an error icon if there's an error fetching user data
+                return Icon(Icons.error);
               }
 
               if (!snapshot.hasData || !snapshot.data!.exists) {
                 return Icon(Icons.account_circle, size: 30, color: Theme.of(context).colorScheme.tertiary);
               }
 
-              // Access user data from the snapshot
               Map<String, dynamic> userData = snapshot.data!.data() as Map<String, dynamic>;
 
-              // Check if user has a profile picture URL
               if (userData.containsKey('profile') && userData['profile'] != null) {
                 return CircleAvatar(
                   radius: 25,
@@ -179,12 +485,18 @@ class _MessagePageState extends State<MessagePage> {
         onPressed: () {
           setState(() {
             isSearchBarVisible = false;
+            searchQuery = ''; // Clear the search query when going back
           });
         },
-        icon: Icon(Icons.arrow_back,),
+        icon: Icon(Icons.arrow_back),
       ),
       title: TextField(
         autofocus: true,
+        onChanged: (value) {
+          setState(() {
+            searchQuery = value;
+          });
+        },
         style: TextStyle(),
         decoration: InputDecoration(
           border: InputBorder.none,
