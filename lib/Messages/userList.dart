@@ -78,33 +78,33 @@ class _MessageUserListPageState extends State<MessageUserListPage> {
       ),
       body: Column(
         children: [
-          ListTile(
-            onTap: () {},
-            leading: Container(
-              height: 35,
-              width: 35,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(50),
-                border: Border.all(
-                  color: Colors.blue,
-                  width: 1.0,
-                ),
-              ),
-              child: Icon(
-                Icons.groups_2_outlined,
-                color: Colors.blue,
-                size: 22,
-              ),
-            ),
-            title: Text(
-              'Create a group',
-              style: TextStyle(
-                color: Colors.blue,
-                fontWeight: FontWeight.w900,
-                fontSize: 15,
-              ),
-            ),
-          ),
+          // ListTile(
+          //   onTap: () {},
+          //   leading: Container(
+          //     height: 35,
+          //     width: 35,
+          //     decoration: BoxDecoration(
+          //       borderRadius: BorderRadius.circular(50),
+          //       border: Border.all(
+          //         color: Colors.blue,
+          //         width: 1.0,
+          //       ),
+          //     ),
+          //     child: Icon(
+          //       Icons.groups_2_outlined,
+          //       color: Colors.blue,
+          //       size: 22,
+          //     ),
+          //   ),
+          //   title: Text(
+          //     'Create a group',
+          //     style: TextStyle(
+          //       color: Colors.blue,
+          //       fontWeight: FontWeight.w900,
+          //       fontSize: 15,
+          //     ),
+          //   ),
+          // ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance.collection('users').snapshots(),

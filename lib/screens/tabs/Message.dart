@@ -30,174 +30,283 @@ class _MessagePageState extends State<MessagePage> {
   }
 
   Widget buildDefaultBody() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('messages')
-          .where('participants', arrayContains: FirebaseAuth.instance.currentUser!.uid)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance.collection('users').doc(FirebaseAuth.instance.currentUser!.uid).snapshots(),
+      builder: (context, userSnapshot) {
+        if (userSnapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
         }
 
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+        if (userSnapshot.hasError) {
+          return Center(child: Text('Error: ${userSnapshot.error}'));
         }
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Welcome to your inbox!',
-                  style: TextStyle(fontSize: 35, fontWeight: FontWeight.w900, color: Theme.of(context).colorScheme.primary),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Drop a line, share posts and more with private\n'
-                      'conversations between you and others on Q.',
-                  style: TextStyle(color: Theme.of(context).colorScheme.secondary, fontWeight: FontWeight.w400),
-                ),
-                const SizedBox(height: 35),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      CupertinoPageRoute(
-                        builder: (context) => const MessageUserListPage(),
+        if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+          return Center(child: Text('User data not found.'));
+        }
+
+        final currentUserData = userSnapshot.data!.data() as Map<String, dynamic>;
+        final pinnedConversations = (currentUserData['pinnedConversations'] as List<dynamic>?)?.cast<String>() ?? [];
+
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('messages')
+              .where('participants', arrayContains: FirebaseAuth.instance.currentUser!.uid)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            }
+
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome to your inbox!',
+                      style: TextStyle(fontSize: 35, fontWeight: FontWeight.w900, color: Theme.of(context).colorScheme.primary),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Drop a line, share posts and more with private\n'
+                          'conversations between you and others on Q.',
+                      style: TextStyle(color: Theme.of(context).colorScheme.secondary, fontWeight: FontWeight.w400),
+                    ),
+                    const SizedBox(height: 35),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          CupertinoPageRoute(
+                            builder: (context) => const MessageUserListPage(),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30.0),
+                        ),
                       ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30.0),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 13),
+                        child: Text(
+                          'Write a message',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+                        ),
+                      ),
                     ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 13),
-                    child: Text(
-                      'Write a message',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-                    ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
-          );
-        }
+              );
+            }
 
-        final messages = snapshot.data!.docs;
-        final userIds = messages.map((doc) => doc['participants']).expand((i) => i).toSet();
-        userIds.remove(FirebaseAuth.instance.currentUser!.uid);
+            final messages = snapshot.data!.docs;
+            final userIds = messages.map((doc) => doc['participants']).expand((i) => i).toSet();
+            userIds.remove(FirebaseAuth.instance.currentUser!.uid);
 
-        return Stack(
-          children: [
-            ListView.builder(
-              itemCount: userIds.length,
-              itemBuilder: (context, index) {
-                return FutureBuilder<DocumentSnapshot>(
-                  future: FirebaseFirestore.instance.collection('users').doc(userIds.elementAt(index)).get(),
-                  builder: (context, userSnapshot) {
-                    if (userSnapshot.connectionState == ConnectionState.waiting) {
-                      return Center(child: CircularProgressIndicator());
-                    }
+            final List<String> sortedUserIds = [
+              ...pinnedConversations.where(userIds.contains), // Pinned conversations first
+              ...userIds.where((id) => !pinnedConversations.contains(id)), // Other conversations
+            ];
 
-                    if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
-                      return Container();
-                    }
-
-                    final userData = userSnapshot.data!.data() as Map<String, dynamic>;
-                    final userId = userIds.elementAt(index);
-                    final userName = userData['name'] ?? 'Unknown User';
-
-                    return FutureBuilder<QuerySnapshot>(
-                      future: FirebaseFirestore.instance.collection('messages')
-                          .where('participants', arrayContains: userId)
-                          .orderBy('timestamp', descending: true)
-                          .limit(1)
-                          .get(),
-                      builder: (context, messageSnapshot) {
-                        String lastMessage = 'Loading...';
-                        String lastMessageTime = '';
-                        Widget lastMessageWidget = Text(lastMessage);
-
-                        if (messageSnapshot.hasData && messageSnapshot.data!.docs.isNotEmpty) {
-                          final lastDoc = messageSnapshot.data!.docs.first;
-                          final mediaType = lastDoc['mediaType'];
-
-                          lastMessageTime = DateFormat('hh:mm a').format(
-                            (lastDoc['timestamp'] as Timestamp).toDate(),
-                          );
-
-                          if (mediaType == 0) {
-                            lastMessage = lastDoc['text'] ?? 'Loading...';
-                            lastMessageWidget = Text(lastMessage);
-                          } else if (mediaType == 1) {
-                            lastMessageWidget = Text('You sent a photo');
-                          } else if (mediaType == 2) {
-                            lastMessageWidget = Text('You sent a video');
-                          }
+            return Stack(
+              children: [
+                ListView.builder(
+                  itemCount: sortedUserIds.length,
+                  itemBuilder: (context, index) {
+                    return FutureBuilder<DocumentSnapshot>(
+                      future: FirebaseFirestore.instance.collection('users').doc(sortedUserIds.elementAt(index)).get(),
+                      builder: (context, userSnapshot) {
+                        if (userSnapshot.connectionState == ConnectionState.waiting) {
+                          //return Center(child: CircularProgressIndicator());
                         }
 
-                        return ListTile(
-                          leading: CircleAvatar(
-                            radius: 23,
-                            backgroundImage: CachedNetworkImageProvider(userData['profile'] ?? ''),
-                            backgroundColor: Colors.grey,
-                          ),
-                          title: Text(userName),
-                          subtitle: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              lastMessageWidget,
-                              Text(
-                                lastMessageTime,
-                                style: TextStyle(color: Colors.grey, fontSize: 10),
+                        if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+                          return Container();
+                        }
+
+                        final userData = userSnapshot.data!.data() as Map<String, dynamic>;
+                        final userId = sortedUserIds.elementAt(index);
+                        final userName = userData['name'] ?? 'Unknown User';
+
+                        return FutureBuilder<QuerySnapshot>(
+                          future: FirebaseFirestore.instance.collection('messages')
+                              .where('participants', arrayContains: userId)
+                              .orderBy('timestamp', descending: true)
+                              .limit(1)
+                              .get(),
+                          builder: (context, messageSnapshot) {
+                            String lastMessage = 'Loading...';
+                            String lastMessageTime = '';
+                            Widget lastMessageWidget = Text(lastMessage);
+
+                            if (messageSnapshot.hasData && messageSnapshot.data!.docs.isNotEmpty) {
+                              final lastDoc = messageSnapshot.data!.docs.first;
+                              final mediaType = lastDoc['mediaType'];
+
+                              lastMessageTime = DateFormat('hh:mm a').format(
+                                (lastDoc['timestamp'] as Timestamp).toDate(),
+                              );
+
+                              if (mediaType == 0) {
+                                lastMessage = lastDoc['text'] ?? 'Loading...';
+                                lastMessageWidget = Text(lastMessage);
+                              } else if (mediaType == 1) {
+                                lastMessageWidget = Text('You sent a photo');
+                              } else if (mediaType == 2) {
+                                lastMessageWidget = Text('You sent a video');
+                              }
+                            }
+
+                            final bool isPinned = pinnedConversations.contains(userId);
+
+                            return ListTile(
+                              leading: CircleAvatar(
+                                radius: 23,
+                                backgroundImage: CachedNetworkImageProvider(userData['profile'] ?? ''),
+                                backgroundColor: Colors.grey,
                               ),
-                            ],
-                          ),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              CupertinoPageRoute(
-                                builder: (context) => UserMessagePage(
-                                  userId: userId,
-                                  userName: userName,
-                                ),
+                              title: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(userName),
+                                  if (isPinned)
+                                    Icon(CupertinoIcons.pin_fill, color: Colors.orange, size: 16),
+                                ],
                               ),
+                              subtitle: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  lastMessageWidget,
+                                  Text(
+                                    lastMessageTime,
+                                    style: TextStyle(color: Colors.grey, fontSize: 10),
+                                  ),
+                                ],
+                              ),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  CupertinoPageRoute(
+                                    builder: (context) => UserMessagePage(
+                                      userId: userId,
+                                      userName: userName,
+                                    ),
+                                  ),
+                                );
+                              },
+                              onLongPress: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (BuildContext context) {
+                                    return AlertDialog(
+                                      content: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          ListTile(
+                                            title: Text('Delete conversation'),
+                                            onTap: () {
+                                              Navigator.of(context).pop();
+                                              _deleteConversation(userId);
+                                            },
+                                          ),
+                                          ListTile(
+                                            title: Text(isPinned ? 'Unpin conversation' : 'Pin conversation'),
+                                            onTap: () {
+                                              Navigator.of(context).pop();
+                                              _pinConversation(userId);
+                                            },
+                                          ),
+                                          ListTile(
+                                            title: Text('Report @$userName'),
+                                            onTap: () {
+                                              Navigator.of(context).pop();
+                                              _reportConversation(userId);
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
                             );
                           },
                         );
                       },
                     );
                   },
-                );
-              },
-            ),
-            Positioned(
-              bottom: 20,
-              right: 16,
-              child: FloatingActionButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    CupertinoPageRoute(
-                      builder: (context) => const MessageUserListPage(),
-                    ),
-                  );
-                },
-                child: Icon(CupertinoIcons.plus_bubble, size: 25, color: Colors.white),
-                backgroundColor: Colors.blue,
-              ),
-            ),
-          ],
+                ),
+                Positioned(
+                  bottom: 20,
+                  right: 16,
+                  child: FloatingActionButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        CupertinoPageRoute(
+                          builder: (context) => const MessageUserListPage(),
+                        ),
+                      );
+                    },
+                    child: Icon(CupertinoIcons.plus_bubble, size: 25, color: Colors.white),
+                    backgroundColor: Colors.blue,
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
   }
+
+  void _deleteConversation(String userId) async {
+    final currentUserId = FirebaseAuth.instance.currentUser!.uid;
+    final messagesSnapshot = await FirebaseFirestore.instance
+        .collection('messages')
+        .where('participants', arrayContains: currentUserId)
+        .get();
+
+    for (var doc in messagesSnapshot.docs) {
+      final participants = List<String>.from(doc['participants']);
+      if (participants.contains(userId)) {
+        await doc.reference.delete();
+      }
+    }
+  }
+
+  void _pinConversation(String userId) async {
+    final currentUserId = FirebaseAuth.instance.currentUser!.uid;
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(currentUserId).get();
+
+    final pinnedConversations = (userDoc.data()!['pinnedConversations'] as List<dynamic>?) ?? [];
+    if (!pinnedConversations.contains(userId)) {
+      pinnedConversations.add(userId);
+      await FirebaseFirestore.instance.collection('users').doc(currentUserId).update({
+        'pinnedConversations': pinnedConversations,
+      });
+    } else {
+      pinnedConversations.remove(userId);
+      await FirebaseFirestore.instance.collection('users').doc(currentUserId).update({
+        'pinnedConversations': pinnedConversations,
+      });
+    }
+  }
+
+  void _reportConversation(String userId) {
+    print('Conversation with $userId reported.');
+  }
+
+
+
 
   Widget buildSearchBody() {
     return Column(

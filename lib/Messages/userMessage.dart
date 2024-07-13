@@ -309,7 +309,7 @@ class _UserMessagePageState extends State<UserMessagePage> {
                   return Center(child: Text('Error: ${snapshot.error}'));
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return Center(child: Text('No messages found.'));
+                  return Center(child: Text('Say, Hi😊.', style: TextStyle(fontSize: 15, color: Colors.black38, fontWeight: FontWeight.w300),));
                 }
 
                 var messages = snapshot.data!.docs.map((doc) => Message.fromMap(doc.data() as Map<String, dynamic>)).toList();
