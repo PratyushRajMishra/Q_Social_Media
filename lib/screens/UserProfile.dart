@@ -7,12 +7,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:iconly/iconly.dart';
 import 'package:intl/intl.dart';
 import 'package:pinput/pinput.dart';
 import 'package:q/followersList.dart';
 import 'package:q/screens/comments.dart';
 import 'package:q/screens/postDetails.dart';
 import 'package:q/screens/settings/edit_profile.dart';
+import 'package:q/screens/tabs/Post.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../followingList.dart';
@@ -473,8 +475,52 @@ class _UserProfilePageState extends State<UserProfilePage>
                                             child: Container(
                                               height: 30,
                                               child: ClipRRect(
+                                                borderRadius: BorderRadius.circular(10),
+                                                child: OutlinedButton(
+                                                  onPressed: () {
+                                                    Navigator.push(
+                                                      context,
+                                                      CupertinoPageRoute(
+                                                        builder: (context) => PostPage(audioPath: ''),
+                                                      ),
+                                                    );
+                                                  },
+                                                  style: ButtonStyle(
+                                                    backgroundColor: MaterialStateProperty.all(Colors.blue),
+                                                    foregroundColor: MaterialStateProperty.all(Colors.white),
+                                                    shape: MaterialStateProperty.all(
+                                                      RoundedRectangleBorder(
+                                                        borderRadius: BorderRadius.circular(10),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisAlignment: MainAxisAlignment.center, // Center icon and text
+                                                    children: [
+                                                      Icon(CupertinoIcons.add, size: 17),
+                                                      SizedBox(width: 2), // Add spacing between icon and text if needed
+                                                      Text(
+                                                        'Add to Post',
+                                                        style: TextStyle(
+                                                          fontSize: 16,
+                                                          fontWeight: FontWeight.w500,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          SizedBox(
+                                            width: 20,
+                                          ),
+                                          Expanded(
+                                            child: Container(
+                                              height: 30,
+                                              child: ClipRRect(
                                                 borderRadius:
-                                                    BorderRadius.circular(10),
+                                                BorderRadius.circular(10),
                                                 child: OutlinedButton(
                                                   onPressed: () {
                                                     Navigator.push(
@@ -490,8 +536,8 @@ class _UserProfilePageState extends State<UserProfilePage>
                                                         .all(
                                                       RoundedRectangleBorder(
                                                         borderRadius:
-                                                            BorderRadius
-                                                                .circular(10),
+                                                        BorderRadius
+                                                            .circular(10),
                                                       ),
                                                     ),
                                                   ),
@@ -500,40 +546,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                                                     style: TextStyle(
                                                       fontSize: 16,
                                                       fontWeight:
-                                                          FontWeight.w500,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            width: 20,
-                                          ),
-                                          Expanded(
-                                            child: Container(
-                                              height: 30,
-                                              child: ClipRRect(
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                                child: OutlinedButton(
-                                                  onPressed: () {},
-                                                  style: ButtonStyle(
-                                                    shape: MaterialStateProperty
-                                                        .all(
-                                                      RoundedRectangleBorder(
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(10),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  child: Text(
-                                                    'Share Profile',
-                                                    style: TextStyle(
-                                                      fontSize: 16,
-                                                      fontWeight:
-                                                          FontWeight.w500,
+                                                      FontWeight.w500,
                                                     ),
                                                   ),
                                                 ),

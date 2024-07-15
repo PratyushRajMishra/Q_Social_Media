@@ -157,7 +157,7 @@ class _MessagePageState extends State<MessagePage> {
 
                               if (mediaType == 0) {
                                 lastMessage = lastDoc['text'] ?? 'Loading...';
-                                lastMessageWidget = Text(lastMessage);
+                                lastMessageWidget = _buildTruncatedText(lastMessage);
                               } else if (mediaType == 1) {
                                 lastMessageWidget = Text('You sent a photo');
                               } else if (mediaType == 2) {
@@ -267,6 +267,21 @@ class _MessagePageState extends State<MessagePage> {
       },
     );
   }
+
+  Widget _buildTruncatedText(String text) {
+    // Maximum number of words to display
+    const int maxWords = 7;
+    final words = text.split(' ');
+    final isTextLong = words.length > maxWords;
+
+    return Text(
+      isTextLong ? '${words.take(maxWords).join(' ')}...' : text,
+      style: TextStyle(color: Colors.grey), // Adjust the style as needed
+      maxLines: 2, // Adjust the number of lines as needed
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
 
   void _deleteConversation(String userId) async {
     final currentUserId = FirebaseAuth.instance.currentUser!.uid;

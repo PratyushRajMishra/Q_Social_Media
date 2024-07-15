@@ -778,8 +778,8 @@ class _TargetProfilePageState extends State<TargetProfilePage> {
   Widget _buildRepliesTab() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('comments') // Query across all comment collections
-          .where('userId', isEqualTo: _userData!.uid) // Filter comments by current user
+          .collection('comments')
+          .where('userId', isEqualTo: _userData.uid)
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -789,53 +789,242 @@ class _TargetProfilePageState extends State<TargetProfilePage> {
         } else if (snapshot.data == null || snapshot.data!.docs.isEmpty) {
           return Center(child: Text('No replied posts'));
         } else {
-          // Extract postIds from comments
-          List postIds = snapshot.data!.docs.map((commentDoc) {
-            return commentDoc['postId'];
-          }).toList();
+          List<String> postIds = snapshot.data!.docs
+              .map((commentDoc) => commentDoc['postId'] as String)
+              .toList();
 
-          return Expanded(
-            child: ListView.builder(
-              padding: EdgeInsets.all(10.0),
-              itemCount: postIds.length,
-              itemBuilder: (context, index) {
-                return FutureBuilder<DocumentSnapshot>(
-                  future: FirebaseFirestore.instance
-                      // .collection('users')
-                      // .doc(_userData.uid)
-                      .collection('posts')
-                      .doc(postIds[index])
-                      .get(),
-                  builder: (context, postSnapshot) {
-                    if (postSnapshot.connectionState ==
-                        ConnectionState.waiting) {
-                      return CircularProgressIndicator();
-                    } else if (!postSnapshot.hasData ||
-                        !postSnapshot.data!.exists) {
-                      return SizedBox.shrink(); // Post not found or deleted
-                    } else {
-                      // Post exists, build ListTile
-                      PostModel post = PostModel.fromMap(postSnapshot.data!.data()! as Map<String, dynamic>);
-                      return Column(
-                        children: [
-                          ListTile(
-                            title: Text(post.text),
-                            subtitle: Text(post.timestamp.toString()),
-                            // You can add more details if needed
-                          ),
-                          Divider(),
-                        ],
-                      );
+          return ListView.builder(
+            padding: EdgeInsets.all(10.0),
+            itemCount: postIds.length,
+            itemBuilder: (context, index) {
+              String postId = postIds[index];
+
+              return FutureBuilder<DocumentSnapshot>(
+                future: FirebaseFirestore.instance
+                    .collection('posts')
+                    .doc(postId)
+                    .get(),
+                builder: (context, postSnapshot) {
+                  if (postSnapshot.connectionState == ConnectionState.waiting) {
+                    return Center(child: CircularProgressIndicator());
+                  } else if (postSnapshot.hasError) {
+                    return Center(child: Text('Error: ${postSnapshot.error}'));
+                  } else if (!postSnapshot.hasData || !postSnapshot.data!.exists) {
+                    return SizedBox.shrink();
+                  } else {
+                    Map<String, dynamic>? postData = postSnapshot.data!.data() as Map<String, dynamic>?;
+                    if (postData == null) {
+                      return SizedBox.shrink();
                     }
-                  },
-                );
-              },
-            ),
+
+                    PostModel post = PostModel.fromMap(postData);
+
+                    return FutureBuilder<DocumentSnapshot>(
+                      future: FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(post.userId)
+                          .get(),
+                      builder: (context, userSnapshot) {
+                        if (userSnapshot.connectionState == ConnectionState.waiting) {
+                          return Center(child: CircularProgressIndicator());
+                        } else if (userSnapshot.hasError) {
+                          return Center(child: Text('Error: ${userSnapshot.error}'));
+                        } else if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+                          return ListTile(
+                            title: Text('Unknown User: ${post.text}'),
+                            subtitle: Text(post.timestamp.toString()),
+                          );
+                        } else {
+                          Map<String, dynamic>? userData = userSnapshot.data!.data() as Map<String, dynamic>?;
+                          if (userData == null) {
+                            return ListTile(
+                              title: Text('Unknown User: ${post.text}'),
+                              subtitle: Text(post.timestamp.toString()),
+                            );
+                          }
+
+                          UserModel user = UserModel.fromMap(userData);
+
+                          return ListTile(
+                            onTap: () async {
+                              showDialog(
+                                barrierDismissible: false,
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return Center(child: CircularProgressIndicator());
+                                },
+                              );
+
+                              try {
+                                final commentsSnapshotFuture = FirebaseFirestore.instance
+                                    .collection('comments')
+                                    .where('postId', isEqualTo: post.id)
+                                    .get();
+                                final likedSnapshotFuture = FirebaseFirestore.instance
+                                    .collection('posts')
+                                    .doc(post.id)
+                                    .get();
+
+                                final List<dynamic> comments = (await commentsSnapshotFuture).docs.map((commentDoc) => commentDoc.data()).toList();
+                                final DocumentSnapshot likedSnapshot = await likedSnapshotFuture;
+                                final Map<String, dynamic> likedData = likedSnapshot.data() as Map<String, dynamic>;
+                                final List<dynamic> likedUsers = likedData['likedBy'] ?? [];
+
+                                Navigator.pop(context);
+
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => PostDetailsPage(
+                                      username: user.name.toString(),
+                                      text: post.text,
+                                      profilePictureUrl: user.profile ?? '',
+                                      postId: post.id,
+                                      comments: comments,
+                                      postTime: post.timestamp,
+                                      likedData: likedUsers,
+                                      userIDs: user.uid.toString(),
+                                      mediaUrl: post.mediaUrl ?? '',
+                                      fileType: post.fileType ?? '',
+                                    ),
+                                  ),
+                                );
+                              } catch (e) {
+                                print("Error fetching data: $e");
+                              }
+                            },
+                            title: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                CircleAvatar(
+                                  backgroundImage: NetworkImage(user.profile ?? ''),
+                                ),
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            user.name.toString(),
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: Theme.of(context).colorScheme.tertiary,
+                                            ),
+                                          ),
+                                          SizedBox(width: 10),
+                                          Text(
+                                            _formatDate(post.timestamp),
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Theme.of(context).colorScheme.secondary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(height: 5),
+                                      Text(
+                                        post.text,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Theme.of(context).colorScheme.tertiary,
+                                        ),
+                                      ),
+                                      if (post.mediaUrl != null) _buildMediaWidget(post),
+                                      SizedBox(height: 15),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              GestureDetector(
+                                                onTap: () async {
+                                                  // Your like functionality here
+                                                },
+                                                child: Icon(
+                                                  post.likedBy.contains(FirebaseAuth.instance.currentUser?.uid)
+                                                      ? Icons.favorite
+                                                      : Icons.favorite_border,
+                                                  color: post.likedBy.contains(FirebaseAuth.instance.currentUser?.uid)
+                                                      ? Colors.red
+                                                      : Theme.of(context).colorScheme.secondary,
+                                                  size: 20,
+                                                ),
+                                              ),
+                                              SizedBox(width: 5),
+                                              if (post.likedBy.isNotEmpty)
+                                                Text(
+                                                  '${post.likedBy.length}',
+                                                  style: TextStyle(
+                                                    color: Theme.of(context).colorScheme.secondary,
+                                                    fontSize: 16,
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                          GestureDetector(
+                                            onTap: () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) => CommentsPage(
+                                                    username: user.name.toString(),
+                                                    postText: post.text,
+                                                    profilePictureUrl: user.profile ?? '',
+                                                    postId: post.id,
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                            child: Icon(
+                                              CupertinoIcons.chat_bubble_text,
+                                              size: 20,
+                                              color: Theme.of(context).colorScheme.secondary,
+                                            ),
+                                          ),
+                                          InkWell(
+                                            onTap: () {
+                                              // Handle share functionality
+                                            },
+                                            child: Icon(
+                                              Icons.share_outlined,
+                                              size: 20,
+                                              color: Theme.of(context).colorScheme.secondary,
+                                            ),
+                                          ),
+                                          InkWell(
+                                            onTap: () {
+                                              // Handle save functionality
+                                            },
+                                            child: Icon(
+                                              Icons.bookmark_border_outlined,
+                                              size: 20,
+                                              color: Theme.of(context).colorScheme.secondary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                      },
+                    );
+                  }
+                },
+              );
+            },
           );
         }
       },
     );
   }
+
 
   Widget _buildSavedTab() {
     return Center(
