@@ -50,108 +50,98 @@ class _UserMessageProfilePageState extends State<UserMessageProfilePage> {
   }
 
   Future<void> _blockUser() async {
-    // Fetch the username of the user being blocked
-    String blockedUsername;
     try {
+      // Fetch the username of the user being blocked
       DocumentSnapshot userToBlockDoc = await FirebaseFirestore.instance.collection('users').doc(widget.userId).get();
       Map<String, dynamic>? userToBlockData = userToBlockDoc.data() as Map<String, dynamic>?;
-      blockedUsername = userToBlockData?['name'] ?? 'User';
-    } catch (e) {
-      // Handle error fetching username, perhaps log or show a message
-      print('Error fetching blocked user data: $e');
-      blockedUsername = 'User';
-    }
+      String blockedUsername = userToBlockData?['name'] ?? 'User';
 
-    // Show confirmation dialog
-    bool? confirmBlock = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false, // Prevent dismissing the dialog by tapping outside
-      builder: (context) => AlertDialog(
-        title: Text('Block $blockedUsername?'),
-        content: Text('Are you sure you want to block this user? They will no longer be able to send you messages.'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(false); // Return false to indicate cancellation
-            },
-            child: Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(true); // Return true to indicate confirmation
-            },
-            child: Text('Block'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmBlock == true) {
-      // Show the dialog with a loading indicator
-      showDialog(
+      // Show confirmation dialog
+      bool? confirmBlock = await showDialog<bool>(
         context: context,
-        barrierDismissible: false, // Prevent dismissing the dialog by tapping outside
+        barrierDismissible: false,
         builder: (context) => AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.onTertiary,
-          content: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 20),
-              Text('Blocking $blockedUsername...'),
-            ],
-          ),
+          title: Text('Block $blockedUsername?'),
+          content: Text('Are you sure you want to block this user? They will no longer be able to send you messages.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+              child: Text('Block'),
+            ),
+          ],
         ),
       );
 
-      try {
-        // Update the current user's document to include the blocked user
+      if (confirmBlock == true) {
+        // Show loading dialog
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            backgroundColor: Theme.of(context).colorScheme.onTertiary,
+            content: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(width: 20),
+                Expanded(
+                  child: Text(
+                    'Blocking $blockedUsername...',
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+
+        // Update the user's blocked list
         await FirebaseFirestore.instance.collection('users').doc(widget.currentUserId).update({
           'blockedUsers': FieldValue.arrayUnion([widget.userId]),
         });
 
-        // Optionally, update the blocked user's document to reflect that they have been blocked
+        // Update the blocked user's blockedBy list
         await FirebaseFirestore.instance.collection('users').doc(widget.userId).update({
           'blockedBy': FieldValue.arrayUnion([widget.currentUserId]),
         });
 
-        // Update the state to reflect the block action
+        // Update state and dismiss dialogs
         setState(() {
           _isBlocked = true;
         });
 
-        // Dismiss the dialog
-        Navigator.of(context).pop(); // Close the loading dialog
+        Navigator.of(context).pop(); // Close loading dialog
 
-        // Show the SnackBar with the username and a dismiss button
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('$blockedUsername has been blocked.'),
             duration: Duration(seconds: 2),
-            action: SnackBarAction(
-              label: 'Close',
-              onPressed: () {
-                // Optionally handle any action here if needed
-              },
-            ),
-          ),
-        );
-      } catch (e) {
-        print('Error blocking user: $e');
-
-        // Dismiss the dialog
-        Navigator.of(context).pop(); // Close the loading dialog
-
-        // Show error SnackBar
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error blocking user.'),
-            duration: Duration(seconds: 2),
           ),
         );
       }
+    } catch (e) {
+      print('Error blocking user: $e');
+
+      Navigator.of(context).pop(); // Close loading dialog
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error blocking user.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
+
 
 
   Future<void> _unblockUser() async {
@@ -163,7 +153,7 @@ class _UserMessageProfilePageState extends State<UserMessageProfilePage> {
       Map<String, dynamic>? userToUnblockData = userToUnblockDoc.data() as Map<String, dynamic>?;
       unblockedUsername = userToUnblockData?['name'] ?? 'User';
     } catch (e) {
-      // Handle error fetching username, perhaps log or show a message
+      // Handle error fetching username
       print('Error fetching unblocked user data: $e');
       unblockedUsername = 'User';
     }
@@ -171,7 +161,7 @@ class _UserMessageProfilePageState extends State<UserMessageProfilePage> {
     // Show the dialog with a loading indicator
     showDialog(
       context: context,
-      barrierDismissible: false, // Prevent dismissing the dialog by tapping outside
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.onTertiary,
         content: Row(
@@ -179,7 +169,13 @@ class _UserMessageProfilePageState extends State<UserMessageProfilePage> {
           children: [
             CircularProgressIndicator(),
             SizedBox(width: 20),
-            Text('Unblocking $unblockedUsername...'),
+            Expanded(
+              child: Text(
+                'Unblocking $unblockedUsername...',
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
           ],
         ),
       ),
@@ -208,7 +204,7 @@ class _UserMessageProfilePageState extends State<UserMessageProfilePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('$unblockedUsername has been unblocked.'),
-          duration: Duration(seconds: 2), // Optional: adjust duration as needed
+          duration: Duration(seconds: 2),
           action: SnackBarAction(
             label: 'Close',
             onPressed: () {
@@ -232,6 +228,7 @@ class _UserMessageProfilePageState extends State<UserMessageProfilePage> {
       );
     }
   }
+
 
   void _deleteConversation(String userId) async {
     final currentUserId = FirebaseAuth.instance.currentUser!.uid;
