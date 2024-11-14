@@ -150,7 +150,7 @@ class _TargetProfilePageState extends State<TargetProfilePage> {
       )
           : _userData != null
           ? DefaultTabController(
-        length: 3,
+        length: 2,
         child: NestedScrollView(
           headerSliverBuilder:
               (BuildContext context, bool innerBoxIsScrolled) {
@@ -438,15 +438,15 @@ class _TargetProfilePageState extends State<TargetProfilePage> {
                           ),
                         ),
                       ),
-                      Tab(
-                        child: Text(
-                          'Saved',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
+                      // Tab(
+                      //   child: Text(
+                      //     'Saved',
+                      //     style: TextStyle(
+                      //       fontSize: 16,
+                      //       fontWeight: FontWeight.bold,
+                      //     ),
+                      //   ),
+                      // ),
                     ],
                   ),
                 ),
@@ -458,7 +458,7 @@ class _TargetProfilePageState extends State<TargetProfilePage> {
             children: [
               _buildPostsTab(), // Implement _buildPostsTab(), _buildRepliesTab(), _buildSavedTab() methods
               _buildRepliesTab(),
-              _buildSavedTab(),
+              //_buildSavedTab(),
             ],
           ),
         ),
@@ -1026,11 +1026,11 @@ class _TargetProfilePageState extends State<TargetProfilePage> {
   }
 
 
-  Widget _buildSavedTab() {
-    return Center(
-      child: Text('Saved Tab'),
-    );
-  }
+  // Widget _buildSavedTab() {
+  //   return Center(
+  //     child: Text('Saved Tab'),
+  //   );
+  // }
 
   String _formatDate(Timestamp timestamp) {
     DateTime date = timestamp.toDate();

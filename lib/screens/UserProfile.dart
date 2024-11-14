@@ -150,13 +150,33 @@ class _UserProfilePageState extends State<UserProfilePage>
     }
   }
 
+
+  Future<List<Map<String, dynamic>>> getRepostedPosts() async {
+    // Fetch the user's shared post IDs
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(_user?.uid).get();
+    List<String> sharedPostIds = List<String>.from(userDoc['sharedPosts'] ?? []);
+
+    // Fetch the shared post data from the 'posts' collection
+    List<Map<String, dynamic>> repostedPosts = [];
+    for (var postId in sharedPostIds) {
+      var postDoc = await FirebaseFirestore.instance.collection('posts').doc(postId).get();
+      if (postDoc.exists) {
+        repostedPosts.add(postDoc.data() as Map<String, dynamic>);
+      }
+    }
+
+    return repostedPosts;
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       body: _userData != null && _userProfilePictureUrl != null
           ? DefaultTabController(
-              length: 3,
+              length: 4,
               child: NestedScrollView(
                 headerSliverBuilder:
                     (BuildContext context, bool innerBoxIsScrolled) {
@@ -497,8 +517,8 @@ class _UserProfilePageState extends State<UserProfilePage>
                                                   child: Row(
                                                     mainAxisAlignment: MainAxisAlignment.center, // Center icon and text
                                                     children: [
-                                                      Icon(CupertinoIcons.add, size: 17),
-                                                      SizedBox(width: 2), // Add spacing between icon and text if needed
+                                                      Icon(CupertinoIcons.add_circled, size: 18),
+                                                      SizedBox(width: 8), // Add spacing between icon and text if needed
                                                       Text(
                                                         'Add to Post',
                                                         style: TextStyle(
@@ -594,6 +614,15 @@ class _UserProfilePageState extends State<UserProfilePage>
                             ),
                             Tab(
                               child: Text(
+                                'Reposted',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            Tab(
+                              child: Text(
                                 'Saved',
                                 style: TextStyle(
                                   fontSize: 16,
@@ -612,6 +641,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                   children: [
                     _buildPostsTab(),
                     _buildRepliesTab(),
+                    _buildRepostedTab(),
                     _buildSavedTab(),
                   ],
                 ),
@@ -1175,6 +1205,86 @@ class _UserProfilePageState extends State<UserProfilePage>
     );
   }
 
+
+  Widget _buildRepostedTab() {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: getRepostedPosts(), // Fetch shared posts
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Center(child: Text('No reposts found.'));
+        }
+
+        List<Map<String, dynamic>> repostedPosts = snapshot.data!;
+
+        return ListView.builder(
+          itemCount: repostedPosts.length,
+          itemBuilder: (context, index) {
+            var postData = repostedPosts[index];
+            return Card(
+              margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              elevation: 5,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundImage: NetworkImage(postData['profile'] ?? ''),
+                          radius: 20,
+                        ),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                postData['name'] ?? 'Unknown User',
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                DateFormat('yMMMd').format((postData['timestamp'] as Timestamp).toDate()),
+                                style: TextStyle(color: Colors.grey, fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      postData['text'] ?? 'No content available',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    if (postData['mediaUrl'] != null && postData['mediaUrl'].isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: Image.network(
+                          postData['mediaUrl'],
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 
 
 
