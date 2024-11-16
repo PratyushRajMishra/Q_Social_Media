@@ -1212,79 +1212,289 @@ class _UserProfilePageState extends State<UserProfilePage>
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError) {
+        } else if (snapshot.hasError) {
           return Center(child: Text('Error: ${snapshot.error}'));
-        }
-
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return Center(child: Text('No reposts found.'));
         }
 
         List<Map<String, dynamic>> repostedPosts = snapshot.data!;
 
         return ListView.builder(
+          padding: EdgeInsets.all(10.0),
           itemCount: repostedPosts.length,
           itemBuilder: (context, index) {
             var postData = repostedPosts[index];
-            return Card(
-              margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              elevation: 5,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundImage: NetworkImage(postData['profile'] ?? ''),
-                          radius: 20,
-                        ),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                postData['name'] ?? 'Unknown User',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                DateFormat('yMMMd').format((postData['timestamp'] as Timestamp).toDate()),
-                                style: TextStyle(color: Colors.grey, fontSize: 14),
-                              ),
-                            ],
+
+            return FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(postData['userId'])
+                  .get(),
+              builder: (context, userSnapshot) {
+                if (userSnapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                } else if (userSnapshot.hasError) {
+                  return Center(child: Text('Error: ${userSnapshot.error}'));
+                } else if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+                  return ListTile(
+                    title: Text('Unknown User'),
+                    subtitle: Text(postData['timestamp']?.toString() ?? ''),
+                  );
+                }
+
+                Map<String, dynamic>? userData =
+                userSnapshot.data!.data() as Map<String, dynamic>?;
+
+                return GestureDetector(
+                  onTap: () async {
+                    // Show a loading dialog
+                    showDialog(
+                      barrierDismissible: false,
+                      context: context,
+                      builder: (BuildContext context) {
+                        return Center(child: CircularProgressIndicator());
+                      },
+                    );
+
+                    try {
+                      // Fetch comments and likes
+                      final commentsSnapshotFuture = FirebaseFirestore.instance
+                          .collection('comments')
+                          .where('id', isEqualTo: postData['id'])
+                          .get();
+
+                      final likedSnapshotFuture = FirebaseFirestore.instance
+                          .collection('posts')
+                          .doc(postData['id'])
+                          .get();
+
+                      final comments = (await commentsSnapshotFuture)
+                          .docs
+                          .map((commentDoc) => commentDoc.data())
+                          .toList();
+
+                      final likedSnapshot = await likedSnapshotFuture;
+                      final likedData =
+                          likedSnapshot.data() as Map<String, dynamic>? ?? {};
+                      final likedUsers = likedData['likedBy'] ?? [];
+
+                      Navigator.pop(context); // Close the loading dialog
+
+                      // Navigate to PostDetailsPage
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PostDetailsPage(
+                            username: userData?['name'] ?? 'Unknown User',
+                            text: postData['text'] ?? 'No content available',
+                            profilePictureUrl: userData?['profile'] ?? '',
+                            postId: postData['id'] ?? '',
+                            comments: comments,
+                            postTime: postData['timestamp'],
+                            likedData: likedUsers,
+                            userIDs: postData['userId'] ?? '',
+                            mediaUrl: postData['mediaUrl'] ?? '',
+                            fileType: postData['fileType'] ?? '',
                           ),
                         ),
-                      ],
-                    ),
-                    SizedBox(height: 10),
-                    Text(
-                      postData['text'] ?? 'No content available',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                    if (postData['mediaUrl'] != null && postData['mediaUrl'].isNotEmpty)
+                      );
+                    } catch (e) {
+                      Navigator.pop(context); // Close the loading dialog
+                      print("Error fetching data: $e");
+                    }
+                  },
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundImage:
+                            NetworkImage(userData?['profile'] ?? ''),
+                            radius: 20,
+                          ),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  userData?['name'] ?? 'Unknown User',
+                                  style: TextStyle(
+                                      fontSize: 16, fontWeight: FontWeight.bold),
+                                ),
+                                Text(
+                                  DateFormat('yMMMd').format(
+                                      (postData['timestamp'] as Timestamp)
+                                          .toDate()),
+                                  style:
+                                  TextStyle(color: Colors.grey, fontSize: 14),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 10),
                       Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        child: Image.network(
-                          postData['mediaUrl'],
-                          fit: BoxFit.cover,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: Text(
+                          postData['text'] ?? 'No content available',
+                          style: TextStyle(fontSize: 16),
                         ),
                       ),
-                  ],
-                ),
-              ),
+                      if (postData['mediaUrl'] != null && postData['mediaUrl'].isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(15),
+                            child: Stack(
+                              children: [
+                                Container(
+                                  color: Colors.grey[300], // Grey placeholder
+                                  height: 250,
+                                  width: double.infinity,
+                                ),
+                                Center(
+                                  child: Image.network(
+                                    postData['mediaUrl'],
+                                    height: 250,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                    loadingBuilder: (context, child, loadingProgress) {
+                                      if (loadingProgress == null) {
+                                        return child;
+                                      }
+                                      return Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          Container(
+                                            height: 250,
+                                            width: double.infinity,
+                                            color: Colors.grey[300],
+                                          ),
+                                          CircularProgressIndicator(
+                                            value: loadingProgress.expectedTotalBytes != null
+                                                ? loadingProgress.cumulativeBytesLoaded /
+                                                (loadingProgress.expectedTotalBytes ?? 1)
+                                                : null,
+                                            strokeWidth: 2.0,
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Center(
+                                        child: Text(
+                                          'Failed to load image',
+                                          style: TextStyle(color: Colors.red),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      SizedBox(height: 10),
+                      FutureBuilder<DocumentSnapshot>(
+                        future: FirebaseFirestore.instance
+                            .collection('posts')
+                            .doc(postData['id'])
+                            .get(),
+                        builder: (context, postSnapshot) {
+                          if (postSnapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return Center(child: CircularProgressIndicator());
+                          } else if (postSnapshot.hasError) {
+                            return Center(
+                                child: Text('Error: ${postSnapshot.error}'));
+                          } else if (!postSnapshot.hasData ||
+                              !postSnapshot.data!.exists) {
+                            return Text('No likes data found');
+                          }
+
+                          Map<String, dynamic>? postData =
+                          postSnapshot.data!.data()
+                          as Map<String, dynamic>?;
+                          List<dynamic> likedUsers =
+                              postData?['likedBy'] ?? []; // Safely fetch likedUsers
+
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  GestureDetector(
+                                    onTap: () {
+                                      // Handle like functionality
+                                    },
+                                    child: Icon(
+                                      Icons.favorite_border,
+                                      color: Colors.grey,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  SizedBox(width: 5),
+                                  Text(
+                                    '${likedUsers.length}',
+                                    style: TextStyle(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .secondary,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  // Handle comments
+                                },
+                                child: Icon(
+                                  CupertinoIcons.chat_bubble_text,
+                                  color: Colors.grey,
+                                  size: 20,
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  // Handle share functionality
+                                },
+                                child: Icon(
+                                  Icons.share_outlined,
+                                  color: Colors.grey,
+                                  size: 20,
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  // Handle save functionality
+                                },
+                                child: Icon(
+                                  Icons.bookmark_border_outlined,
+                                  color: Colors.grey,
+                                  size: 20,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
             );
           },
         );
       },
     );
   }
+
+
 
 
 
