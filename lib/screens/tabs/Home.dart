@@ -666,24 +666,24 @@ class _HomePageState extends State<HomePage> {
                                                                                     return Container();
                                                                                   },
                                                                                   errorBuilder: (context, error, stackTrace) {
-                                                                                    return Container(
-                                                                                      height: 100,
-                                                                                      width: double.infinity,
-                                                                                      color: Colors.black,
-                                                                                      child: IconButton(
-                                                                                        onPressed: () {
-                                                                                          Fluttertoast.showToast(
-                                                                                            msg: '⚠️  Media can not play here!',
-                                                                                            toastLength: Toast.LENGTH_SHORT,
-                                                                                            gravity: ToastGravity.TOP,
-                                                                                            backgroundColor: Colors.black87,
-                                                                                            textColor: Colors.white,
-                                                                                            fontSize: 16.0,
-                                                                                          );
-                                                                                        },
-                                                                                        icon: Icon(Icons.play_circle, color: Colors.white),
-                                                                                      ),
-                                                                                    );
+                                                                                      return Container(
+                                                                                        height: 100,
+                                                                                        width: double.infinity,
+                                                                                        color: Colors.black,
+                                                                                        child: IconButton(
+                                                                                          onPressed: () {
+                                                                                            Fluttertoast.showToast(
+                                                                                              msg: '⚠️  Media can not play here!',
+                                                                                              toastLength: Toast.LENGTH_SHORT,
+                                                                                              gravity: ToastGravity.TOP,
+                                                                                              backgroundColor: Colors.black87,
+                                                                                              textColor: Colors.white,
+                                                                                              fontSize: 16.0,
+                                                                                            );
+                                                                                          },
+                                                                                          icon: Icon(Icons.play_circle, color: Colors.white),
+                                                                                        ),
+                                                                                      );
                                                                                   },
                                                                                 ),
                                                                               ],
@@ -742,7 +742,7 @@ class _HomePageState extends State<HomePage> {
                                                                       elevation: 5, // Shadow for the button
                                                                     ),
                                                                     child: Text(
-                                                                      'Share now',
+                                                                      'Repost now',
                                                                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                                                                     ),
                                                                   ),
@@ -777,7 +777,7 @@ class _HomePageState extends State<HomePage> {
                                                   },
                                                   child: Row(
                                                     children: [
-                                                      Icon(Icons.share_outlined, size: 20, color: Theme.of(context).colorScheme.secondary),
+                                                      Icon(CupertinoIcons.arrow_2_squarepath, size: 20, color: Theme.of(context).colorScheme.secondary),
                                                     ],
                                                   ),
                                                 ),

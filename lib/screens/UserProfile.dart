@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:io';
 
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:iconly/iconly.dart';
 import 'package:intl/intl.dart';
 import 'package:pinput/pinput.dart';
@@ -150,16 +150,22 @@ class _UserProfilePageState extends State<UserProfilePage>
     }
   }
 
-
   Future<List<Map<String, dynamic>>> getRepostedPosts() async {
     // Fetch the user's shared post IDs
-    final userDoc = await FirebaseFirestore.instance.collection('users').doc(_user?.uid).get();
-    List<String> sharedPostIds = List<String>.from(userDoc['sharedPosts'] ?? []);
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(_user?.uid)
+        .get();
+    List<String> sharedPostIds =
+        List<String>.from(userDoc['sharedPosts'] ?? []);
 
     // Fetch the shared post data from the 'posts' collection
     List<Map<String, dynamic>> repostedPosts = [];
     for (var postId in sharedPostIds) {
-      var postDoc = await FirebaseFirestore.instance.collection('posts').doc(postId).get();
+      var postDoc = await FirebaseFirestore.instance
+          .collection('posts')
+          .doc(postId)
+          .get();
       if (postDoc.exists) {
         repostedPosts.add(postDoc.data() as Map<String, dynamic>);
       }
@@ -167,8 +173,6 @@ class _UserProfilePageState extends State<UserProfilePage>
 
     return repostedPosts;
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -266,7 +270,10 @@ class _UserProfilePageState extends State<UserProfilePage>
                                                               MaterialPageRoute(
                                                                   builder:
                                                                       (context) =>
-                                                                          FollowersListPage(userId: _userData.uid.toString(),)));
+                                                                          FollowersListPage(
+                                                                            userId:
+                                                                                _userData.uid.toString(),
+                                                                          )));
                                                         },
                                                         child: Column(
                                                           children: [
@@ -305,12 +312,16 @@ class _UserProfilePageState extends State<UserProfilePage>
                                                               MaterialPageRoute(
                                                                   builder:
                                                                       (context) =>
-                                                                      FollowingListPage(userId: _userData.uid.toString(),)));
+                                                                          FollowingListPage(
+                                                                            userId:
+                                                                                _userData.uid.toString(),
+                                                                          )));
                                                         },
                                                         child: Column(
                                                           children: [
                                                             Text(
-                                                              _userData.following!
+                                                              _userData
+                                                                  .following!
                                                                   .length
                                                                   .toString(),
                                                               style: TextStyle(
@@ -495,35 +506,53 @@ class _UserProfilePageState extends State<UserProfilePage>
                                             child: Container(
                                               height: 30,
                                               child: ClipRRect(
-                                                borderRadius: BorderRadius.circular(10),
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
                                                 child: OutlinedButton(
                                                   onPressed: () {
                                                     Navigator.push(
                                                       context,
                                                       CupertinoPageRoute(
-                                                        builder: (context) => PostPage(audioPath: ''),
+                                                        builder: (context) =>
+                                                            PostPage(
+                                                                audioPath: ''),
                                                       ),
                                                     );
                                                   },
                                                   style: ButtonStyle(
-                                                    backgroundColor: MaterialStateProperty.all(Colors.blue),
-                                                    foregroundColor: MaterialStateProperty.all(Colors.white),
-                                                    shape: MaterialStateProperty.all(
+                                                    backgroundColor:
+                                                        MaterialStateProperty
+                                                            .all(Colors.blue),
+                                                    foregroundColor:
+                                                        MaterialStateProperty
+                                                            .all(Colors.white),
+                                                    shape: MaterialStateProperty
+                                                        .all(
                                                       RoundedRectangleBorder(
-                                                        borderRadius: BorderRadius.circular(10),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(10),
                                                       ),
                                                     ),
                                                   ),
                                                   child: Row(
-                                                    mainAxisAlignment: MainAxisAlignment.center, // Center icon and text
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center, // Center icon and text
                                                     children: [
-                                                      Icon(CupertinoIcons.add_circled, size: 18),
-                                                      SizedBox(width: 8), // Add spacing between icon and text if needed
+                                                      Icon(
+                                                          CupertinoIcons
+                                                              .add_circled,
+                                                          size: 18),
+                                                      SizedBox(
+                                                          width:
+                                                              8), // Add spacing between icon and text if needed
                                                       Text(
                                                         'Add to Post',
                                                         style: TextStyle(
                                                           fontSize: 16,
-                                                          fontWeight: FontWeight.w500,
+                                                          fontWeight:
+                                                              FontWeight.w500,
                                                         ),
                                                       ),
                                                     ],
@@ -540,7 +569,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                                               height: 30,
                                               child: ClipRRect(
                                                 borderRadius:
-                                                BorderRadius.circular(10),
+                                                    BorderRadius.circular(10),
                                                 child: OutlinedButton(
                                                   onPressed: () {
                                                     Navigator.push(
@@ -556,8 +585,8 @@ class _UserProfilePageState extends State<UserProfilePage>
                                                         .all(
                                                       RoundedRectangleBorder(
                                                         borderRadius:
-                                                        BorderRadius
-                                                            .circular(10),
+                                                            BorderRadius
+                                                                .circular(10),
                                                       ),
                                                     ),
                                                   ),
@@ -566,7 +595,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                                                     style: TextStyle(
                                                       fontSize: 16,
                                                       fontWeight:
-                                                      FontWeight.w500,
+                                                          FontWeight.w500,
                                                     ),
                                                   ),
                                                 ),
@@ -654,7 +683,8 @@ class _UserProfilePageState extends State<UserProfilePage>
   }
 
   Widget _buildPostsTab() {
-    _userPosts.sort((a, b) => b.timestamp.compareTo(a.timestamp)); // Sort posts by timestamp in descending order
+    _userPosts.sort((a, b) => b.timestamp
+        .compareTo(a.timestamp)); // Sort posts by timestamp in descending order
 
     return Column(
       children: [
@@ -690,7 +720,8 @@ class _UserProfilePageState extends State<UserProfilePage>
                       child: ListTile(
                         onTap: () async {
                           showDialog(
-                            barrierDismissible: false, // Prevent user from dismissing the dialog
+                            barrierDismissible:
+                                false, // Prevent user from dismissing the dialog
                             context: context,
                             builder: (BuildContext context) {
                               return Center(
@@ -701,17 +732,33 @@ class _UserProfilePageState extends State<UserProfilePage>
 
                           try {
                             // Fetch comments data and liked data simultaneously
-                            final commentsSnapshotFuture = FirebaseFirestore.instance.collection('comments').where('postId', isEqualTo: _userPosts[index].id).get();
-                            final likedSnapshotFuture = FirebaseFirestore.instance.
-                           // collection('users').doc(_userData.uid).
-                            collection('posts').doc(_userPosts[index].id).get();
+                            final commentsSnapshotFuture = FirebaseFirestore
+                                .instance
+                                .collection('comments')
+                                .where('postId',
+                                    isEqualTo: _userPosts[index].id)
+                                .get();
+                            final likedSnapshotFuture =
+                                FirebaseFirestore.instance
+                                    .
+                                    // collection('users').doc(_userData.uid).
+                                    collection('posts')
+                                    .doc(_userPosts[index].id)
+                                    .get();
 
                             // Wait for both futures to complete
-                            final List<dynamic> comments = (await commentsSnapshotFuture).docs.map((commentDoc) => commentDoc.data()).toList();
-                            final DocumentSnapshot likedSnapshot = await likedSnapshotFuture;
-                            final Map<String, dynamic> likedData = likedSnapshot.data() as Map<String, dynamic>;
+                            final List<dynamic> comments =
+                                (await commentsSnapshotFuture)
+                                    .docs
+                                    .map((commentDoc) => commentDoc.data())
+                                    .toList();
+                            final DocumentSnapshot likedSnapshot =
+                                await likedSnapshotFuture;
+                            final Map<String, dynamic> likedData =
+                                likedSnapshot.data() as Map<String, dynamic>;
                             // If 'likedData' contains a list of liked users, you can extract it accordingly
-                            final List<dynamic> likedUsers = likedData['likedBy'] ?? [];
+                            final List<dynamic> likedUsers =
+                                likedData['likedBy'] ?? [];
 
                             // Close the progress dialog
                             Navigator.pop(context);
@@ -729,8 +776,11 @@ class _UserProfilePageState extends State<UserProfilePage>
                                   postTime: _userPosts[index].timestamp,
                                   likedData: likedUsers,
                                   userIDs: _userData.uid.toString(),
-                                  mediaUrl: _userPosts[index].mediaUrl.toString(),  // Pass the liked data here
-                                  fileType: _userPosts[index].fileType.toString(),
+                                  mediaUrl: _userPosts[index]
+                                      .mediaUrl
+                                      .toString(), // Pass the liked data here
+                                  fileType:
+                                      _userPosts[index].fileType.toString(),
                                 ),
                               ),
                             );
@@ -747,7 +797,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                               alignment: Alignment.topLeft,
                               child: CircleAvatar(
                                 backgroundImage:
-                                NetworkImage(_userProfilePictureUrl ?? ''),
+                                    NetworkImage(_userProfilePictureUrl ?? ''),
                               ),
                             ),
                             SizedBox(width: 10),
@@ -757,11 +807,11 @@ class _UserProfilePageState extends State<UserProfilePage>
                                 children: [
                                   Row(
                                     mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Column(
                                         crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Row(
                                             children: [
@@ -776,8 +826,8 @@ class _UserProfilePageState extends State<UserProfilePage>
                                               ),
                                               SizedBox(width: 10),
                                               Text(
-                                                _formatDate(
-                                                    _userPosts[index].timestamp),
+                                                _formatDate(_userPosts[index]
+                                                    .timestamp),
                                                 style: TextStyle(
                                                   fontSize: 12,
                                                   color: Theme.of(context)
@@ -790,8 +840,8 @@ class _UserProfilePageState extends State<UserProfilePage>
                                           SizedBox(height: 5),
                                           Container(
                                             width: MediaQuery.of(context)
-                                                .size
-                                                .width *
+                                                    .size
+                                                    .width *
                                                 0.7,
                                             child: Text(
                                               _userPosts[index].text,
@@ -810,11 +860,14 @@ class _UserProfilePageState extends State<UserProfilePage>
                                   SizedBox(height: 12),
                                   // Display media if available
                                   if (_userPosts[index].mediaUrl != null)
-                                    _buildMediaWidget(_userPosts[index]), // Add this line
-                                  SizedBox(height: 15,),
+                                    _buildMediaWidget(
+                                        _userPosts[index]), // Add this line
+                                  SizedBox(
+                                    height: 15,
+                                  ),
                                   Row(
                                     mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Row(
                                         children: [
@@ -829,8 +882,8 @@ class _UserProfilePageState extends State<UserProfilePage>
                                               color: isLiked
                                                   ? Colors.red
                                                   : Theme.of(context)
-                                                  .colorScheme
-                                                  .secondary,
+                                                      .colorScheme
+                                                      .secondary,
                                               size: 20,
                                             ),
                                           ),
@@ -857,11 +910,16 @@ class _UserProfilePageState extends State<UserProfilePage>
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (context) => CommentsPage(
-                                                username: _userData.name.toString(),
-                                                postText: _userPosts[index].text,
-                                                profilePictureUrl: _userData.profile ?? '',
-                                                postId: _userPosts[index].id, // Pass the postId here
+                                              builder: (context) =>
+                                                  CommentsPage(
+                                                username:
+                                                    _userData.name.toString(),
+                                                postText:
+                                                    _userPosts[index].text,
+                                                profilePictureUrl:
+                                                    _userData.profile ?? '',
+                                                postId: _userPosts[index]
+                                                    .id, // Pass the postId here
                                               ),
                                             ),
                                           );
@@ -869,7 +927,9 @@ class _UserProfilePageState extends State<UserProfilePage>
                                         child: Icon(
                                           CupertinoIcons.chat_bubble_text,
                                           size: 20,
-                                          color: Theme.of(context).colorScheme.secondary,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .secondary,
                                         ),
                                       ),
                                       SizedBox(width: 10),
@@ -880,7 +940,9 @@ class _UserProfilePageState extends State<UserProfilePage>
                                         child: Icon(
                                           Icons.share_outlined,
                                           size: 20,
-                                          color: Theme.of(context).colorScheme.secondary,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .secondary,
                                         ),
                                       ),
                                       SizedBox(width: 10),
@@ -891,7 +953,9 @@ class _UserProfilePageState extends State<UserProfilePage>
                                         child: Icon(
                                           Icons.bookmark_border_outlined,
                                           size: 20,
-                                          color: Theme.of(context).colorScheme.secondary,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .secondary,
                                         ),
                                       ),
                                     ],
@@ -950,10 +1014,9 @@ class _UserProfilePageState extends State<UserProfilePage>
         child: AudioPlayerWidget(audioFile: File(post.mediaUrl!)),
       );
     }
-    return SizedBox.shrink(); // Return an empty widget if media type is not supported
+    return SizedBox
+        .shrink(); // Return an empty widget if media type is not supported
   }
-
-
 
   Widget _buildRepliesTab() {
     return StreamBuilder<QuerySnapshot>(
@@ -989,10 +1052,12 @@ class _UserProfilePageState extends State<UserProfilePage>
                     return Center(child: CircularProgressIndicator());
                   } else if (postSnapshot.hasError) {
                     return Center(child: Text('Error: ${postSnapshot.error}'));
-                  } else if (!postSnapshot.hasData || !postSnapshot.data!.exists) {
+                  } else if (!postSnapshot.hasData ||
+                      !postSnapshot.data!.exists) {
                     return SizedBox.shrink();
                   } else {
-                    Map<String, dynamic>? postData = postSnapshot.data!.data() as Map<String, dynamic>?;
+                    Map<String, dynamic>? postData =
+                        postSnapshot.data!.data() as Map<String, dynamic>?;
                     if (postData == null) {
                       return SizedBox.shrink();
                     }
@@ -1005,17 +1070,21 @@ class _UserProfilePageState extends State<UserProfilePage>
                           .doc(post.userId)
                           .get(),
                       builder: (context, userSnapshot) {
-                        if (userSnapshot.connectionState == ConnectionState.waiting) {
+                        if (userSnapshot.connectionState ==
+                            ConnectionState.waiting) {
                           return Center(child: CircularProgressIndicator());
                         } else if (userSnapshot.hasError) {
-                          return Center(child: Text('Error: ${userSnapshot.error}'));
-                        } else if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+                          return Center(
+                              child: Text('Error: ${userSnapshot.error}'));
+                        } else if (!userSnapshot.hasData ||
+                            !userSnapshot.data!.exists) {
                           return ListTile(
                             title: Text('Unknown User: ${post.text}'),
                             subtitle: Text(post.timestamp.toString()),
                           );
                         } else {
-                          Map<String, dynamic>? userData = userSnapshot.data!.data() as Map<String, dynamic>?;
+                          Map<String, dynamic>? userData = userSnapshot.data!
+                              .data() as Map<String, dynamic>?;
                           if (userData == null) {
                             return ListTile(
                               title: Text('Unknown User: ${post.text}'),
@@ -1031,24 +1100,35 @@ class _UserProfilePageState extends State<UserProfilePage>
                                 barrierDismissible: false,
                                 context: context,
                                 builder: (BuildContext context) {
-                                  return Center(child: CircularProgressIndicator());
+                                  return Center(
+                                      child: CircularProgressIndicator());
                                 },
                               );
 
                               try {
-                                final commentsSnapshotFuture = FirebaseFirestore.instance
+                                final commentsSnapshotFuture = FirebaseFirestore
+                                    .instance
                                     .collection('comments')
                                     .where('postId', isEqualTo: post.id)
                                     .get();
-                                final likedSnapshotFuture = FirebaseFirestore.instance
+                                final likedSnapshotFuture = FirebaseFirestore
+                                    .instance
                                     .collection('posts')
                                     .doc(post.id)
                                     .get();
 
-                                final List<dynamic> comments = (await commentsSnapshotFuture).docs.map((commentDoc) => commentDoc.data()).toList();
-                                final DocumentSnapshot likedSnapshot = await likedSnapshotFuture;
-                                final Map<String, dynamic> likedData = likedSnapshot.data() as Map<String, dynamic>;
-                                final List<dynamic> likedUsers = likedData['likedBy'] ?? [];
+                                final List<dynamic> comments =
+                                    (await commentsSnapshotFuture)
+                                        .docs
+                                        .map((commentDoc) => commentDoc.data())
+                                        .toList();
+                                final DocumentSnapshot likedSnapshot =
+                                    await likedSnapshotFuture;
+                                final Map<String, dynamic> likedData =
+                                    likedSnapshot.data()
+                                        as Map<String, dynamic>;
+                                final List<dynamic> likedUsers =
+                                    likedData['likedBy'] ?? [];
 
                                 Navigator.pop(context);
 
@@ -1077,21 +1157,26 @@ class _UserProfilePageState extends State<UserProfilePage>
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 CircleAvatar(
-                                  backgroundImage: NetworkImage(user.profile ?? ''),
+                                  backgroundImage:
+                                      NetworkImage(user.profile ?? ''),
                                 ),
                                 SizedBox(width: 10),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.start,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.start,
                                         children: [
                                           Text(
                                             user.name.toString(),
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
-                                              color: Theme.of(context).colorScheme.tertiary,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .tertiary,
                                             ),
                                           ),
                                           SizedBox(width: 10),
@@ -1099,7 +1184,9 @@ class _UserProfilePageState extends State<UserProfilePage>
                                             _formatDate(post.timestamp),
                                             style: TextStyle(
                                               fontSize: 12,
-                                              color: Theme.of(context).colorScheme.secondary,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .secondary,
                                             ),
                                           ),
                                         ],
@@ -1109,13 +1196,17 @@ class _UserProfilePageState extends State<UserProfilePage>
                                         post.text,
                                         style: TextStyle(
                                           fontSize: 16,
-                                          color: Theme.of(context).colorScheme.tertiary,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .tertiary,
                                         ),
                                       ),
-                                      if (post.mediaUrl != null) _buildMediaWidget(post),
+                                      if (post.mediaUrl != null)
+                                        _buildMediaWidget(post),
                                       SizedBox(height: 15),
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
                                           Row(
                                             children: [
@@ -1124,12 +1215,18 @@ class _UserProfilePageState extends State<UserProfilePage>
                                                   // Your like functionality here
                                                 },
                                                 child: Icon(
-                                                  post.likedBy.contains(FirebaseAuth.instance.currentUser?.uid)
+                                                  post.likedBy.contains(
+                                                          FirebaseAuth.instance
+                                                              .currentUser?.uid)
                                                       ? Icons.favorite
                                                       : Icons.favorite_border,
-                                                  color: post.likedBy.contains(FirebaseAuth.instance.currentUser?.uid)
+                                                  color: post.likedBy.contains(
+                                                          FirebaseAuth.instance
+                                                              .currentUser?.uid)
                                                       ? Colors.red
-                                                      : Theme.of(context).colorScheme.secondary,
+                                                      : Theme.of(context)
+                                                          .colorScheme
+                                                          .secondary,
                                                   size: 20,
                                                 ),
                                               ),
@@ -1138,7 +1235,9 @@ class _UserProfilePageState extends State<UserProfilePage>
                                                 Text(
                                                   '${post.likedBy.length}',
                                                   style: TextStyle(
-                                                    color: Theme.of(context).colorScheme.secondary,
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .secondary,
                                                     fontSize: 16,
                                                   ),
                                                 ),
@@ -1149,10 +1248,13 @@ class _UserProfilePageState extends State<UserProfilePage>
                                               Navigator.push(
                                                 context,
                                                 MaterialPageRoute(
-                                                  builder: (context) => CommentsPage(
-                                                    username: user.name.toString(),
+                                                  builder: (context) =>
+                                                      CommentsPage(
+                                                    username:
+                                                        user.name.toString(),
                                                     postText: post.text,
-                                                    profilePictureUrl: user.profile ?? '',
+                                                    profilePictureUrl:
+                                                        user.profile ?? '',
                                                     postId: post.id,
                                                   ),
                                                 ),
@@ -1161,7 +1263,9 @@ class _UserProfilePageState extends State<UserProfilePage>
                                             child: Icon(
                                               CupertinoIcons.chat_bubble_text,
                                               size: 20,
-                                              color: Theme.of(context).colorScheme.secondary,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .secondary,
                                             ),
                                           ),
                                           InkWell(
@@ -1171,7 +1275,9 @@ class _UserProfilePageState extends State<UserProfilePage>
                                             child: Icon(
                                               Icons.share_outlined,
                                               size: 20,
-                                              color: Theme.of(context).colorScheme.secondary,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .secondary,
                                             ),
                                           ),
                                           InkWell(
@@ -1181,7 +1287,9 @@ class _UserProfilePageState extends State<UserProfilePage>
                                             child: Icon(
                                               Icons.bookmark_border_outlined,
                                               size: 20,
-                                              color: Theme.of(context).colorScheme.secondary,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .secondary,
                                             ),
                                           ),
                                         ],
@@ -1205,286 +1313,635 @@ class _UserProfilePageState extends State<UserProfilePage>
     );
   }
 
-
   Widget _buildRepostedTab() {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: getRepostedPosts(), // Fetch shared posts
+    return FutureBuilder<QuerySnapshot>(
+      future: FirebaseFirestore.instance
+          .collection('users')
+          .doc(_userData.uid) // Current user's document
+          .collection('sharedPosts') // Access the subcollection
+          .get(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
         } else if (snapshot.hasError) {
           return Center(child: Text('Error: ${snapshot.error}'));
-        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return Center(child: Text('No reposts found.'));
+        } else if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Center(child: Text('No Repost found.'));
         }
 
-        List<Map<String, dynamic>> repostedPosts = snapshot.data!;
+        // Extract shared posts from the subcollection
+        List<QueryDocumentSnapshot> sharedPosts = snapshot.data!.docs;
 
         return ListView.builder(
           padding: EdgeInsets.all(10.0),
-          itemCount: repostedPosts.length,
+          itemCount: sharedPosts.length,
           itemBuilder: (context, index) {
-            var postData = repostedPosts[index];
+            var sharedPostData = sharedPosts[index].data()
+                as Map<String, dynamic>; // Get data from shared post
 
             return FutureBuilder<DocumentSnapshot>(
               future: FirebaseFirestore.instance
                   .collection('users')
-                  .doc(postData['userId'])
+                  .doc(sharedPostData[
+                      'userId']) // Fetch the original post user's data
                   .get(),
               builder: (context, userSnapshot) {
                 if (userSnapshot.connectionState == ConnectionState.waiting) {
                   return Center(child: CircularProgressIndicator());
                 } else if (userSnapshot.hasError) {
                   return Center(child: Text('Error: ${userSnapshot.error}'));
-                } else if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+                } else if (!userSnapshot.hasData ||
+                    !userSnapshot.data!.exists) {
                   return ListTile(
                     title: Text('Unknown User'),
-                    subtitle: Text(postData['timestamp']?.toString() ?? ''),
+                    subtitle:
+                        Text(sharedPostData['timestamp']?.toString() ?? ''),
                   );
                 }
 
                 Map<String, dynamic>? userData =
-                userSnapshot.data!.data() as Map<String, dynamic>?;
+                    userSnapshot.data!.data() as Map<String, dynamic>?;
 
-                return GestureDetector(
-                  onTap: () async {
-                    // Show a loading dialog
-                    showDialog(
-                      barrierDismissible: false,
-                      context: context,
-                      builder: (BuildContext context) {
-                        return Center(child: CircularProgressIndicator());
-                      },
-                    );
-
-                    try {
-                      // Fetch comments and likes
-                      final commentsSnapshotFuture = FirebaseFirestore.instance
-                          .collection('comments')
-                          .where('id', isEqualTo: postData['id'])
-                          .get();
-
-                      final likedSnapshotFuture = FirebaseFirestore.instance
-                          .collection('posts')
-                          .doc(postData['id'])
-                          .get();
-
-                      final comments = (await commentsSnapshotFuture)
-                          .docs
-                          .map((commentDoc) => commentDoc.data())
-                          .toList();
-
-                      final likedSnapshot = await likedSnapshotFuture;
-                      final likedData =
-                          likedSnapshot.data() as Map<String, dynamic>? ?? {};
-                      final likedUsers = likedData['likedBy'] ?? [];
-
-                      Navigator.pop(context); // Close the loading dialog
-
-                      // Navigate to PostDetailsPage
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => PostDetailsPage(
-                            username: userData?['name'] ?? 'Unknown User',
-                            text: postData['text'] ?? 'No content available',
-                            profilePictureUrl: userData?['profile'] ?? '',
-                            postId: postData['id'] ?? '',
-                            comments: comments,
-                            postTime: postData['timestamp'],
-                            likedData: likedUsers,
-                            userIDs: postData['userId'] ?? '',
-                            mediaUrl: postData['mediaUrl'] ?? '',
-                            fileType: postData['fileType'] ?? '',
-                          ),
-                        ),
-                      );
-                    } catch (e) {
-                      Navigator.pop(context); // Close the loading dialog
-                      print("Error fetching data: $e");
+                return FutureBuilder<DocumentSnapshot>(
+                  future: FirebaseFirestore.instance
+                      .collection('posts')
+                      .doc(sharedPostData['postId']) // Original post data
+                      .get(),
+                  builder: (context, postSnapshot) {
+                    if (postSnapshot.connectionState ==
+                        ConnectionState.waiting) {
+                      return Center(child: CircularProgressIndicator());
+                    } else if (postSnapshot.hasError) {
+                      return Center(
+                          child: Text('Error: ${postSnapshot.error}'));
+                    } else if (!postSnapshot.hasData ||
+                        !postSnapshot.data!.exists) {
+                      return Center(child: Text('Original Post not found.'));
                     }
-                  },
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundImage:
-                            NetworkImage(userData?['profile'] ?? ''),
-                            radius: 20,
+
+                    Map<String, dynamic>? postData =
+                        postSnapshot.data!.data() as Map<String, dynamic>?;
+
+                    return GestureDetector(
+                      onTap: () async {
+                        // Show a loading dialog
+                        showDialog(
+                          barrierDismissible: false,
+                          context: context,
+                          builder: (BuildContext context) {
+                            return Center(child: CircularProgressIndicator());
+                          },
+                        );
+
+                        try {
+                          // Fetch comments, likes, and repost details
+                          final commentsSnapshotFuture = FirebaseFirestore
+                              .instance
+                              .collection('comments')
+                              .where('postId',
+                                  isEqualTo: sharedPostData['postId'])
+                              .get();
+
+                          final likedSnapshotFuture = FirebaseFirestore.instance
+                              .collection('posts')
+                              .doc(sharedPostData['postId'])
+                              .get();
+
+                          final comments = (await commentsSnapshotFuture)
+                              .docs
+                              .map((commentDoc) => commentDoc.data())
+                              .toList();
+
+                          final likedSnapshot = await likedSnapshotFuture;
+                          final likedData =
+                              likedSnapshot.data() as Map<String, dynamic>? ??
+                                  {};
+                          final likedUsers = likedData['likedBy'] ?? [];
+
+                          Navigator.pop(context); // Close the loading dialog
+
+                          // Navigate to PostDetailsPage
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    FutureBuilder<DocumentSnapshot>(
+                                  future: FirebaseFirestore.instance
+                                      .collection('users')
+                                      .doc(postData?[
+                                          'userId']) // Fetch the user details based on userId in the postData
+                                      .get(),
+                                  builder: (context, userSnapshot) {
+                                    if (userSnapshot.connectionState ==
+                                        ConnectionState.waiting) {
+                                      return Center(
+                                          child: CircularProgressIndicator());
+                                    } else if (userSnapshot.hasError) {
+                                      return Center(
+                                          child: Text(
+                                              'Error: ${userSnapshot.error}'));
+                                    } else if (!userSnapshot.hasData ||
+                                        !userSnapshot.data!.exists) {
+                                      return Center(
+                                          child: Text('User not found.'));
+                                    }
+
+                                    var userData = userSnapshot.data!.data()
+                                        as Map<String, dynamic>;
+
+                                    return PostDetailsPage(
+                                      username: userData['name'] ??
+                                          'Unknown User', // The original post user's name
+                                      text: postData?['text'] ??
+                                          'No content available', // Text of the shared post
+                                      profilePictureUrl: userData['profile'] ??
+                                          '', // Original post user's profile picture
+                                      postId: postData?['postId'] ??
+                                          '', // Shared post ID
+                                      comments: comments, // List of comments
+                                      postTime: postData?[
+                                          'timestamp'], // Post timestamp
+                                      likedData:
+                                          likedUsers, // Users who liked the post
+                                      userIDs: postData?['userId'] ??
+                                          '', // Original user ID
+                                      mediaUrl: postData?['mediaUrl'] ??
+                                          '', // Media URL of the post
+                                      fileType: postData?['fileType'] ??
+                                          '', // File type (e.g., image, video)
+                                    );
+                                  },
+                                ),
+                              ));
+                        } catch (e) {
+                          Navigator.pop(context); // Close the loading dialog
+                          print("Error fetching data: $e");
+                        }
+                      },
+                      child: Column(
+                        children: <Widget>[
+                          // Shared text (if any)
+                          //if (sharedPostData['sharedText'] != null && sharedPostData['sharedText'].isNotEmpty)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(CupertinoIcons.arrow_2_squarepath,
+                                      size: 14, color: Colors.green.shade800),
+                                  SizedBox(
+                                    width: 5.0,
+                                  ),
+                                  Text(
+                                    'You Reposted',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.green.shade800),
+                                  ),
+                                ],
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: Row(
+                                  children: [
+                                    // Display current user's profile picture
+                                    CircleAvatar(
+                                      backgroundImage: NetworkImage(
+                                          userData?['profile'] ?? ''),
+                                      radius: 20,
+                                    ),
+                                    SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                userData?['name'] ?? 'User',
+                                                style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight:
+                                                        FontWeight.bold),
+                                              ),
+                                              Icon(
+                                                Icons.more_vert,
+                                                size: 18,
+                                                color: Colors.grey,
+                                              )
+                                            ],
+                                          ),
+                                          Text(
+                                            (sharedPostData['timestamp']
+                                                            as Timestamp?)
+                                                        ?.toDate() !=
+                                                    null
+                                                ? DateFormat('yMMMd').format(
+                                                    (sharedPostData['timestamp']
+                                                            as Timestamp)
+                                                        .toDate())
+                                                : 'No timestamp available',
+                                            style: TextStyle(
+                                                color: Colors.grey,
+                                                fontSize: 13),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              SizedBox(
+                                height: 5,
+                              ),
+
+                              if (sharedPostData['sharedText'] != null &&
+                                  sharedPostData['sharedText'].isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 5),
+                                  child: Text(
+                                    sharedPostData['sharedText'],
+                                    style: TextStyle(fontSize: 18),
+                                  ),
+                                ),
+                              SizedBox(
+                                height: 5,
+                              ),
+                              // Original post content
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20.0),
+                                child: Container(
+                                  padding: EdgeInsets.all(15.0),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                        color: Colors.grey.shade300,
+                                        width: 1), // Grey border with 1px width
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          // Fetch the profile image and name of the user who created the post
+                                          FutureBuilder<DocumentSnapshot>(
+                                            future: FirebaseFirestore.instance
+                                                .collection('users')
+                                                .doc(postData?[
+                                                    'userId']) // Fetch the user details based on userId in the postData
+                                                .get(),
+                                            builder: (context, userSnapshot) {
+                                              if (userSnapshot
+                                                      .connectionState ==
+                                                  ConnectionState.waiting) {
+                                                return CircleAvatar(
+                                                  radius: 15,
+                                                  child:
+                                                      CircularProgressIndicator(),
+                                                );
+                                              } else if (userSnapshot
+                                                  .hasError) {
+                                                return CircleAvatar(
+                                                  radius: 15,
+                                                  child: Icon(Icons.error),
+                                                );
+                                              } else if (!userSnapshot
+                                                      .hasData ||
+                                                  !userSnapshot.data!.exists) {
+                                                return CircleAvatar(
+                                                  radius: 15,
+                                                  child: Icon(
+                                                      Icons.account_circle),
+                                                );
+                                              }
+
+                                              // Extract the user data
+                                              var userData =
+                                                  userSnapshot.data!.data()
+                                                      as Map<String, dynamic>;
+
+                                              return Row(
+                                                children: [
+                                                  CircleAvatar(
+                                                    backgroundImage:
+                                                        NetworkImage(userData[
+                                                                'profile'] ??
+                                                            ''),
+                                                    radius: 18,
+                                                  ),
+                                                  SizedBox(width: 10),
+                                                  Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                        userData['name'] ??
+                                                            'Unknown User',
+                                                        style: TextStyle(
+                                                            fontSize: 15,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .bold),
+                                                      ),
+                                                      Text(
+                                                        DateFormat('yMMMd').format(
+                                                            (postData?['timestamp']
+                                                                        as Timestamp?)
+                                                                    ?.toDate() ??
+                                                                DateTime.now()),
+                                                        style: TextStyle(
+                                                            color: Colors.grey,
+                                                            fontSize: 12),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(
+                                        height: 5,
+                                      ),
+                                      if (postData?['text'] != null &&
+                                          postData?['text'].isNotEmpty)
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 5, horizontal: 5),
+                                          child: Text(
+                                            postData!['text'],
+                                            style: TextStyle(fontSize: 15),
+                                          ),
+                                        ),
+                                      if (postData?['mediaUrl'] != null &&
+                                          postData?['mediaUrl'].isNotEmpty)
+                                        ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          child: Image.network(
+                                            postData?['mediaUrl'] ?? '',
+                                            height: 200,
+                                            width: double.infinity,
+                                            fit: BoxFit.cover,
+                                            loadingBuilder: (context, child,
+                                                loadingProgress) {
+                                              if (loadingProgress == null) {
+                                                return child; // If the image is already loaded, display it
+                                              } else {
+                                                return Container(
+                                                  height:
+                                                      200, // Same height as the image
+                                                  width: double
+                                                      .infinity, // Same width as the image
+                                                  color: Colors
+                                                      .grey, // Gray background while loading
+                                                  child: Center(
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                      value: loadingProgress
+                                                                  .expectedTotalBytes !=
+                                                              null
+                                                          ? loadingProgress
+                                                                  .cumulativeBytesLoaded /
+                                                              loadingProgress
+                                                                  .expectedTotalBytes!
+                                                          : null,
+                                                      strokeWidth: 2.0,
+                                                    ),
+                                                  ),
+                                                );
+                                              }
+                                            },
+                                            errorBuilder:
+                                                (context, error, stackTrace) {
+                                              return Container(
+                                                height: 200,
+                                                width: double.infinity,
+                                                color: Colors.black,
+                                                child: IconButton(
+                                                  onPressed: () async {
+                                                    showDialog(
+                                                      barrierDismissible: false,
+                                                      context: context,
+                                                      builder: (BuildContext
+                                                          context) {
+                                                        return Center(
+                                                            child:
+                                                                CircularProgressIndicator());
+                                                      },
+                                                    );
+
+                                                    try {
+                                                      // Fetch comments, likes, and repost details
+                                                      final commentsSnapshotFuture =
+                                                          FirebaseFirestore
+                                                              .instance
+                                                              .collection(
+                                                                  'comments')
+                                                              .where('postId',
+                                                                  isEqualTo:
+                                                                      sharedPostData[
+                                                                          'postId'])
+                                                              .get();
+
+                                                      final likedSnapshotFuture =
+                                                          FirebaseFirestore
+                                                              .instance
+                                                              .collection(
+                                                                  'posts')
+                                                              .doc(
+                                                                  sharedPostData[
+                                                                      'postId'])
+                                                              .get();
+
+                                                      final comments =
+                                                          (await commentsSnapshotFuture)
+                                                              .docs
+                                                              .map((commentDoc) =>
+                                                                  commentDoc
+                                                                      .data())
+                                                              .toList();
+
+                                                      final likedSnapshot =
+                                                          await likedSnapshotFuture;
+                                                      final likedData =
+                                                          likedSnapshot.data()
+                                                                  as Map<String,
+                                                                      dynamic>? ??
+                                                              {};
+                                                      final likedUsers =
+                                                          likedData[
+                                                                  'likedBy'] ??
+                                                              [];
+
+                                                      Navigator.pop(
+                                                          context); // Close the loading dialog
+
+                                                      // Navigate to PostDetailsPage
+                                                      Navigator.push(
+                                                          context,
+                                                          MaterialPageRoute(
+                                                            builder: (context) =>
+                                                                FutureBuilder<
+                                                                    DocumentSnapshot>(
+                                                              future: FirebaseFirestore
+                                                                  .instance
+                                                                  .collection(
+                                                                      'users')
+                                                                  .doc(postData?[
+                                                                      'userId']) // Fetch the user details based on userId in the postData
+                                                                  .get(),
+                                                              builder: (context,
+                                                                  userSnapshot) {
+                                                                if (userSnapshot
+                                                                        .connectionState ==
+                                                                    ConnectionState
+                                                                        .waiting) {
+                                                                  return Center(
+                                                                      child:
+                                                                          CircularProgressIndicator());
+                                                                } else if (userSnapshot
+                                                                    .hasError) {
+                                                                  return Center(
+                                                                      child: Text(
+                                                                          'Error: ${userSnapshot.error}'));
+                                                                } else if (!userSnapshot
+                                                                        .hasData ||
+                                                                    !userSnapshot
+                                                                        .data!
+                                                                        .exists) {
+                                                                  return Center(
+                                                                      child: Text(
+                                                                          'User not found.'));
+                                                                }
+
+                                                                var userData = userSnapshot
+                                                                        .data!
+                                                                        .data()
+                                                                    as Map<
+                                                                        String,
+                                                                        dynamic>;
+
+                                                                return PostDetailsPage(
+                                                                  username: userData[
+                                                                          'name'] ??
+                                                                      'Unknown User', // The original post user's name
+                                                                  text: postData?[
+                                                                          'text'] ??
+                                                                      'No content available', // Text of the shared post
+                                                                  profilePictureUrl:
+                                                                      userData[
+                                                                              'profile'] ??
+                                                                          '', // Original post user's profile picture
+                                                                  postId: postData?[
+                                                                          'postId'] ??
+                                                                      '', // Shared post ID
+                                                                  comments:
+                                                                      comments, // List of comments
+                                                                  postTime:
+                                                                      postData?[
+                                                                          'timestamp'], // Post timestamp
+                                                                  likedData:
+                                                                      likedUsers, // Users who liked the post
+                                                                  userIDs: postData?[
+                                                                          'userId'] ??
+                                                                      '', // Original user ID
+                                                                  mediaUrl: postData?[
+                                                                          'mediaUrl'] ??
+                                                                      '', // Media URL of the post
+                                                                  fileType: postData?[
+                                                                          'fileType'] ??
+                                                                      '', // File type (e.g., image, video)
+                                                                );
+                                                              },
+                                                            ),
+                                                          ));
+                                                    } catch (e) {
+                                                      Navigator.pop(
+                                                          context); // Close the loading dialog
+                                                      print(
+                                                          "Error fetching data: $e");
+                                                    }
+                                                  },
+                                                  icon: Icon(
+                                                    Icons.play_circle,
+                                                    color: Colors.white,
+                                                    size: 35,
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  userData?['name'] ?? 'Unknown User',
-                                  style: TextStyle(
-                                      fontSize: 16, fontWeight: FontWeight.bold),
-                                ),
-                                Text(
-                                  DateFormat('yMMMd').format(
-                                      (postData['timestamp'] as Timestamp)
-                                          .toDate()),
-                                  style:
-                                  TextStyle(color: Colors.grey, fontSize: 14),
-                                ),
-                              ],
+
+                          // Action buttons (like, comment, share, save)
+                          // Row(
+                          //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          //   children: [
+                          //     Row(
+                          //       children: [
+                          //         IconButton(
+                          //           icon: Icon(Icons.favorite_border, color: Colors.grey),
+                          //           onPressed: () {
+                          //             // Handle like functionality
+                          //           },
+                          //         ),
+                          //         Text(
+                          //           '${postData?['likes'] ?? 0}',
+                          //           style: TextStyle(fontSize: 14),
+                          //         ),
+                          //       ],
+                          //     ),
+                          //     IconButton(
+                          //       icon: Icon(Icons.chat_bubble_outline, color: Colors.grey),
+                          //       onPressed: () {
+                          //         // Handle comments
+                          //       },
+                          //     ),
+                          //     IconButton(
+                          //       icon: Icon(Icons.share_outlined, color: Colors.grey),
+                          //       onPressed: () {
+                          //         // Handle share functionality
+                          //       },
+                          //     ),
+                          //     IconButton(
+                          //       icon: Icon(Icons.bookmark_border, color: Colors.grey),
+                          //       onPressed: () {
+                          //         // Handle save functionality
+                          //       },
+                          //     ),
+                          //   ],
+                          // ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: Divider(
+                              color: Colors.grey,
                             ),
                           ),
                         ],
                       ),
-                      SizedBox(height: 10),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        child: Text(
-                          postData['text'] ?? 'No content available',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      ),
-                      if (postData['mediaUrl'] != null && postData['mediaUrl'].isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(15),
-                            child: Stack(
-                              children: [
-                                Container(
-                                  color: Colors.grey[300], // Grey placeholder
-                                  height: 250,
-                                  width: double.infinity,
-                                ),
-                                Center(
-                                  child: Image.network(
-                                    postData['mediaUrl'],
-                                    height: 250,
-                                    width: double.infinity,
-                                    fit: BoxFit.cover,
-                                    loadingBuilder: (context, child, loadingProgress) {
-                                      if (loadingProgress == null) {
-                                        return child;
-                                      }
-                                      return Stack(
-                                        alignment: Alignment.center,
-                                        children: [
-                                          Container(
-                                            height: 250,
-                                            width: double.infinity,
-                                            color: Colors.grey[300],
-                                          ),
-                                          CircularProgressIndicator(
-                                            value: loadingProgress.expectedTotalBytes != null
-                                                ? loadingProgress.cumulativeBytesLoaded /
-                                                (loadingProgress.expectedTotalBytes ?? 1)
-                                                : null,
-                                            strokeWidth: 2.0,
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Center(
-                                        child: Text(
-                                          'Failed to load image',
-                                          style: TextStyle(color: Colors.red),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      SizedBox(height: 10),
-                      FutureBuilder<DocumentSnapshot>(
-                        future: FirebaseFirestore.instance
-                            .collection('posts')
-                            .doc(postData['id'])
-                            .get(),
-                        builder: (context, postSnapshot) {
-                          if (postSnapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return Center(child: CircularProgressIndicator());
-                          } else if (postSnapshot.hasError) {
-                            return Center(
-                                child: Text('Error: ${postSnapshot.error}'));
-                          } else if (!postSnapshot.hasData ||
-                              !postSnapshot.data!.exists) {
-                            return Text('No likes data found');
-                          }
-
-                          Map<String, dynamic>? postData =
-                          postSnapshot.data!.data()
-                          as Map<String, dynamic>?;
-                          List<dynamic> likedUsers =
-                              postData?['likedBy'] ?? []; // Safely fetch likedUsers
-
-                          return Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  GestureDetector(
-                                    onTap: () {
-                                      // Handle like functionality
-                                    },
-                                    child: Icon(
-                                      Icons.favorite_border,
-                                      color: Colors.grey,
-                                      size: 20,
-                                    ),
-                                  ),
-                                  SizedBox(width: 5),
-                                  Text(
-                                    '${likedUsers.length}',
-                                    style: TextStyle(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .secondary,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              GestureDetector(
-                                onTap: () {
-                                  // Handle comments
-                                },
-                                child: Icon(
-                                  CupertinoIcons.chat_bubble_text,
-                                  color: Colors.grey,
-                                  size: 20,
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: () {
-                                  // Handle share functionality
-                                },
-                                child: Icon(
-                                  Icons.share_outlined,
-                                  color: Colors.grey,
-                                  size: 20,
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: () {
-                                  // Handle save functionality
-                                },
-                                child: Icon(
-                                  Icons.bookmark_border_outlined,
-                                  color: Colors.grey,
-                                  size: 20,
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    ],
-                  ),
+                    );
+                  },
                 );
               },
             );
@@ -1493,10 +1950,6 @@ class _UserProfilePageState extends State<UserProfilePage>
       },
     );
   }
-
-
-
-
 
 
   Widget _buildSavedTab() {
