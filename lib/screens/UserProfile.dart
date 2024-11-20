@@ -992,9 +992,13 @@ class _UserProfilePageState extends State<UserProfilePage>
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(10),
-          child: Image.network(
-            post.mediaUrl!,
+          child: CachedNetworkImage(
+            imageUrl: post.mediaUrl!,
             fit: BoxFit.cover,
+            placeholder: (context, url) => Center(
+              child: CircularProgressIndicator(),
+            ),
+            errorWidget: (context, url, error) => Icon(Icons.error),
           ),
         ),
       );
@@ -1014,9 +1018,9 @@ class _UserProfilePageState extends State<UserProfilePage>
         child: AudioPlayerWidget(audioFile: File(post.mediaUrl!)),
       );
     }
-    return SizedBox
-        .shrink(); // Return an empty widget if media type is not supported
+    return SizedBox.shrink(); // Return an empty widget if media type is not supported
   }
+
 
   Widget _buildRepliesTab() {
     return StreamBuilder<QuerySnapshot>(
@@ -1952,11 +1956,373 @@ class _UserProfilePageState extends State<UserProfilePage>
   }
 
 
-  Widget _buildSavedTab() {
-    return Center(
-      child: Text('Saved Tab'),
+  // Make sure PostModel is defined and matches your Firestore structure
+  PostModel _createPostModel(Map<String, dynamic> postData) {
+    return PostModel(
+      id: postData['id'],
+      text: postData['text'],
+      mediaUrl: postData['mediaUrl'],
+      fileType: postData['fileType'],
+      timestamp: postData['timestamp'], userId: '', likedBy: [],
     );
   }
+
+  Widget _buildSavedTab() {
+    return FutureBuilder(
+      future: _getSavedPosts(),
+      builder: (context, AsyncSnapshot<List<Map<String, dynamic>>> snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(child: Text('Error loading saved posts'));
+        }
+
+        if (snapshot.data == null || snapshot.data!.isEmpty) {
+          return Center(child: Text('No saved posts'));
+        }
+
+        return ListView.builder(
+          itemCount: snapshot.data!.length,
+          itemBuilder: (context, index) {
+            var postData = snapshot.data![index]['postData'];
+            var userData = snapshot.data![index]['userData'];
+
+            // Create a PostModel instance
+            PostModel post = _createPostModel(postData);
+
+            return Column(
+              children: [
+                GestureDetector(
+                  onTap: () async {
+                    showDialog(
+                      barrierDismissible: false,
+                      context: context,
+                      builder: (BuildContext context) {
+                        return Center(child: CircularProgressIndicator());
+                      },
+                    );
+
+                    try {
+                      final commentsSnapshotFuture = FirebaseFirestore
+                          .instance
+                          .collection('comments')
+                          .where('postId', isEqualTo: postData['id'])
+                          .get();
+                      final likedSnapshotFuture = FirebaseFirestore
+                          .instance
+                          .collection('posts')
+                          .doc(postData['id'])
+                          .get();
+
+                      final List<dynamic> comments =
+                      (await commentsSnapshotFuture)
+                          .docs
+                          .map((commentDoc) => commentDoc.data())
+                          .toList();
+                      final DocumentSnapshot likedSnapshot =
+                      await likedSnapshotFuture;
+                      final Map<String, dynamic> likedData =
+                      likedSnapshot.data() as Map<String, dynamic>;
+                      final List<dynamic> likedUsers =
+                          likedData['likedBy'] ?? [];
+
+                      Navigator.pop(context);
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PostDetailsPage(
+                            username: userData['name'],
+                            text: postData['text'],
+                            profilePictureUrl: userData['profile'] ?? '',
+                            postId: postData['id'],
+                            comments: comments,
+                            postTime: postData['timestamp'],
+                            likedData: likedUsers,
+                            userIDs: userData['uid'],
+                            mediaUrl: postData['mediaUrl'] ?? '',
+                            fileType: postData['fileType'] ?? '',
+                          ),
+                        ),
+                      );
+                    } catch (e) {
+                      print("Error fetching data: $e");
+                    }
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 5.0, vertical: 0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Profile Image
+                        CircleAvatar(
+                          backgroundImage: NetworkImage(userData['profile'] ?? ''),
+                        ),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  // Username
+                                  Text(
+                                    userData['name'] ?? '',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      color: Theme.of(context).colorScheme.tertiary,
+                                    ),
+                                  ),
+                                  SizedBox(width: 10.0),
+                                  // Timestamp
+                                  Text(
+                                    DateFormat('dd MMM')
+                                        .format(postData['timestamp'].toDate()),
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Theme.of(context).colorScheme.secondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 5),
+                              // Post Text
+                              if (post.text != null && post.text.trim().isNotEmpty)
+                                Text(
+                                  post.text!,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Theme.of(context).colorScheme.tertiary,
+                                  ),
+                                ),
+                              SizedBox(height: 10),
+                              // Post Media
+                              if (post.mediaUrl != null)
+                                _buildMediaWidget(post),
+                            ],
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => _showPostOptions(postData),
+                          child: Align(
+                            alignment: Alignment.topRight,
+                            child: Icon(Icons.more_vert,
+                                color: Colors.black26, size: 17),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Divider after each post except the last one
+                if (index != snapshot.data!.length - 1)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Divider(
+                      thickness: 1,
+                      color: Theme.of(context).colorScheme.secondary,
+                    ),
+                  ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+
+
+// Fetch Saved Posts from Firestore
+  Future<List<Map<String, dynamic>>> _getSavedPosts() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      return [];
+    }
+
+    try {
+      final savedPostsRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('savedPosts');
+
+      final snapshot = await savedPostsRef.get();
+      List<Map<String, dynamic>> savedPosts = [];
+
+      for (var doc in snapshot.docs) {
+        var postId = doc['postId']; // Get the post ID from the saved post
+
+        // Fetch post details from the 'posts' collection
+        var postSnapshot = await FirebaseFirestore.instance.collection('posts').doc(postId).get();
+        var postData = postSnapshot.data();
+
+        // Fetch user details from the 'users' collection
+        var userSnapshot = await FirebaseFirestore.instance.collection('users').doc(postData?['userId']).get();
+        var userData = userSnapshot.data();
+
+        savedPosts.add({
+          'postData': postData,
+          'userData': userData,
+        });
+      }
+
+      return savedPosts;
+    } catch (e) {
+      print('Error fetching saved posts: $e');
+      return [];
+    }
+  }
+
+
+  // Method to show bottom sheet options
+  void _showPostOptions(Map<String, dynamic> postData) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please log in to view options.')),
+      );
+      return;
+    }
+
+    // Fetch the saved status dynamically
+    final savedStatus = await _checkIfPostSaved(postData['id'], userId);
+
+    postData['isBookmarked'] = savedStatus; // Update the postData state
+
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(
+                postData['isBookmarked'] == true
+                    ? Icons.bookmark_remove
+                    : Icons.bookmark,
+              ),
+              title: Text(
+                postData['isBookmarked'] == true ? 'Unsave Post' : 'Save Post',
+              ),
+              onTap: () {
+                Navigator.pop(context); // Close the bottom sheet
+                _savePosts(postData);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.edit),
+              title: Text('Edit Post'),
+              onTap: () {
+                Navigator.pop(context); // Close the bottom sheet
+                // Handle edit post logic
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.delete),
+              title: Text('Delete Post'),
+              onTap: () {
+                Navigator.pop(context); // Close the bottom sheet
+                // Handle delete post logic
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.share),
+              title: Text('Share Post'),
+              onTap: () {
+                Navigator.pop(context); // Close the bottom sheet
+                // Handle share post logic
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+// Check if the post is already saved
+  Future<bool> _checkIfPostSaved(String postId, String userId) async {
+    try {
+      final savedPostsRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('savedPosts');
+
+      final existingPost =
+      await savedPostsRef.where('postId', isEqualTo: postId).get();
+
+      return existingPost.docs.isNotEmpty;
+    } catch (e) {
+      print('Error checking saved status: $e');
+      return false; // Assume not saved if an error occurs
+    }
+  }
+
+// Save/Unsave post logic
+  void _savePosts(Map<String, dynamic> postData) async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please log in to save posts.')),
+      );
+      return;
+    }
+
+    try {
+      // Reference to the saved posts collection
+      final savedPostsRef =
+      firestore.collection('users').doc(userId).collection('savedPosts');
+
+      // Check if the post is already saved
+      final existingPost =
+      await savedPostsRef.where('postId', isEqualTo: postData['id']).get();
+
+      if (existingPost.docs.isNotEmpty) {
+        // Post already saved, remove it
+        await existingPost.docs.first.reference.delete();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Post removed from saved posts.')),
+        );
+
+        // Update the icon state for this specific post
+        setState(() {
+          postData['isBookmarked'] = false; // Mark this post as unbookmarked
+        });
+      } else {
+        // Save the post
+        await savedPostsRef.add({
+          'postId': postData['id'],
+          'userId': postData['userId'],
+          'text': postData['text'],
+          'mediaUrl': postData['mediaUrl'],
+          'timestamp': postData['timestamp'],
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Post saved successfully!')),
+        );
+
+        // Update the icon state for this specific post
+        setState(() {
+          postData['isBookmarked'] = true; // Mark this post as bookmarked
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save post: $e')),
+      );
+    }
+  }
+
+
 
   String _formatDate(Timestamp timestamp) {
     DateTime date = timestamp.toDate();
