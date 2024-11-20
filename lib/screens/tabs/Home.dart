@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:iconly/iconly.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:q/widgets/audioPlayerWidget.dart';
@@ -474,7 +475,7 @@ class _HomePageState extends State<HomePage> {
                                                 Row(
                                                   mainAxisAlignment:
                                                       MainAxisAlignment
-                                                          .spaceBetween,
+                                                          .start,
                                                   children: [
                                                     Row(
                                                       children: [
@@ -514,19 +515,18 @@ class _HomePageState extends State<HomePage> {
                                                           },
                                                           child: Icon(
                                                             isLiked
-                                                                ? Icons.favorite
-                                                                : Icons
-                                                                    .favorite_border,
+                                                                ? CupertinoIcons.heart_fill
+                                                                : CupertinoIcons.heart,
                                                             color: isLiked
                                                                 ? Colors.red
                                                                 : Theme.of(
                                                                         context)
                                                                     .colorScheme
                                                                     .secondary,
-                                                            size: 20,
+                                                            size: 23,
                                                           ),
                                                         ),
-                                                        SizedBox(width: 5),
+                                                        SizedBox(width: 1),
                                                         Visibility(
                                                           visible: (postData[
                                                                           'likedBy']
@@ -541,13 +541,13 @@ class _HomePageState extends State<HomePage> {
                                                                       context)
                                                                   .colorScheme
                                                                   .secondary,
-                                                              fontSize: 16,
+                                                              fontSize: 14,
                                                             ),
                                                           ),
                                                         ),
                                                       ],
                                                     ),
-                                                    SizedBox(width: 10),
+                                                    SizedBox(width: 30),
                                                     // Comments button
                                                     GestureDetector(
                                                       onTap: () {
@@ -574,16 +574,17 @@ class _HomePageState extends State<HomePage> {
                                                         );
                                                       },
                                                       child: Icon(
-                                                        CupertinoIcons
-                                                            .chat_bubble_text,
-                                                        size: 20,
+                                                        CupertinoIcons.chat_bubble,
+                                                        size: 22,
                                                         color: Theme.of(context)
                                                             .colorScheme
                                                             .secondary,
                                                       ),
                                                     ),
-                                                    SizedBox(width: 10),
-                                                    // Share button
+                                                    SizedBox(width: 30),
+
+
+                                                    // Repost button
                                                     GestureDetector(
                                                       onTap: () async {
                                                         // Show the bottom sheet to confirm share action
@@ -807,84 +808,77 @@ class _HomePageState extends State<HomePage> {
                                                                         MainAxisAlignment
                                                                             .spaceAround,
                                                                     children: [
-                                                                      // Share now button
+                                                                      // Repost now button
                                                                       ElevatedButton(
-                                                                        onPressed:
-                                                                            () async {
-                                                                          // Update post data with sharedBy
-                                                                          await FirebaseFirestore
-                                                                              .instance
-                                                                              .collection('posts')
-                                                                              .doc(postDoc.id)
-                                                                              .update({
-                                                                            'sharedBy':
-                                                                                FieldValue.arrayUnion([
-                                                                              _user?.uid
-                                                                            ]),
-                                                                          });
+                                                                      onPressed: () async {
+                                                            try {
+                                                            // Close the modal bottom sheet
+                                                            Navigator.pop(context);
 
-                                                                          // Save shared post information (postId, userId, and shared text)
-                                                                          await FirebaseFirestore
-                                                                              .instance
-                                                                              .collection('users')
-                                                                              .doc(_user?.uid)
-                                                                              .collection('sharedPosts') // Subcollection to keep track of shared posts
-                                                                              .add({
-                                                                            'postId':
-                                                                                postDoc.id,
-                                                                            'userId':
-                                                                                _user?.uid,
-                                                                            'sharedText':
-                                                                                _shareTextController.text, // Save the entered text
-                                                                            'timestamp':
-                                                                                FieldValue.serverTimestamp(),
-                                                                          });
+                                                            // Update post data with sharedBy
+                                                            await FirebaseFirestore.instance.collection('posts').doc(postDoc.id).update({
+                                                            'sharedBy': FieldValue.arrayUnion([_user?.uid]),
+                                                            });
 
-                                                                          // Optionally, update the current user's shared posts field
-                                                                          await FirebaseFirestore
-                                                                              .instance
-                                                                              .collection('users')
-                                                                              .doc(_user?.uid)
-                                                                              .update({
-                                                                            'sharedPosts':
-                                                                                FieldValue.arrayUnion([
-                                                                              postDoc.id
-                                                                            ]),
-                                                                          });
-                                                                          _shareTextController
-                                                                              .clear();
+                                                            // Save shared post information (postId, userId, and shared text)
+                                                            await FirebaseFirestore.instance
+                                                                .collection('users')
+                                                                .doc(_user?.uid)
+                                                                .collection('sharedPosts')
+                                                                .add({
+                                                            'postId': postDoc.id,
+                                                            'userId': _user?.uid,
+                                                            'sharedText': _shareTextController.text,
+                                                            'timestamp': FieldValue.serverTimestamp(),
+                                                            });
 
-                                                                          setState(
-                                                                              () {});
-                                                                          Navigator.pop(
-                                                                              context);
-                                                                        },
-                                                                        style: ElevatedButton
-                                                                            .styleFrom(
-                                                                          backgroundColor:
-                                                                              Colors.blue, // Set background color
-                                                                          onPrimary:
-                                                                              Colors.white, // Text color
-                                                                          shape:
-                                                                              RoundedRectangleBorder(
-                                                                            borderRadius:
-                                                                                BorderRadius.circular(12), // Rounded corners
-                                                                          ),
-                                                                          padding: EdgeInsets.symmetric(
-                                                                              horizontal: 30,
-                                                                              vertical: 5), // Custom padding
-                                                                          elevation:
-                                                                              5, // Shadow for the button
-                                                                        ),
-                                                                        child:
-                                                                            Text(
-                                                                          'Repost now',
-                                                                          style: TextStyle(
-                                                                              fontSize: 16,
-                                                                              fontWeight: FontWeight.bold),
-                                                                        ),
-                                                                      ),
-                                                                      // Cancel button
+                                                            // Optionally, update the current user's shared posts field
+                                                            await FirebaseFirestore.instance.collection('users').doc(_user?.uid).update({
+                                                            'sharedPosts': FieldValue.arrayUnion([postDoc.id]),
+                                                            });
+
+                                                            _shareTextController.clear();
+
+                                                            // Show a toast message
+                                                            Fluttertoast.showToast(
+                                                            msg: "Reposted  ✔ ",
+                                                            toastLength: Toast.LENGTH_SHORT,
+                                                            gravity: ToastGravity.TOP,
+                                                            backgroundColor: Colors.green,
+                                                            textColor: Colors.white,
+                                                            fontSize: 14.0,
+                                                            );
+
+                                                            // Update UI
+                                                            setState(() {});
+                                                            } catch (e) {
+                                                            // Handle errors and show an error toast
+                                                            Fluttertoast.showToast(
+                                                            msg: "Failed to repost: ${e.toString()}",
+                                                            toastLength: Toast.LENGTH_SHORT,
+                                                            gravity: ToastGravity.BOTTOM,
+                                                            backgroundColor: Colors.red,
+                                                            textColor: Colors.white,
+                                                            fontSize: 14.0,
+                                                            );
+                                                            }
+                                                            },
+                                                              style: ElevatedButton.styleFrom(
+                                                                backgroundColor: Colors.blue, // Set background color
+                                                                onPrimary: Colors.white, // Text color
+                                                                shape: RoundedRectangleBorder(
+                                                                  borderRadius: BorderRadius.circular(12), // Rounded corners
+                                                                ),
+                                                                padding: EdgeInsets.symmetric(horizontal: 30, vertical: 5), // Custom padding
+                                                                elevation: 5, // Shadow for the button
+                                                              ),
+                                                              child: Text(
+                                                                'Repost now',
+                                                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                                              ),
+                                                            ),
+
+                                                            // Cancel button
                                                                       OutlinedButton(
                                                                         onPressed:
                                                                             () {
@@ -933,7 +927,7 @@ class _HomePageState extends State<HomePage> {
                                                           Icon(
                                                               CupertinoIcons
                                                                   .arrow_2_squarepath,
-                                                              size: 20,
+                                                              size: 22,
                                                               color: Theme.of(
                                                                       context)
                                                                   .colorScheme
@@ -941,6 +935,17 @@ class _HomePageState extends State<HomePage> {
                                                         ],
                                                       ),
                                                     ),
+                                                    
+                                                    
+                                                    //shared button
+                                                    SizedBox(width: 30),
+                                                    GestureDetector(
+                                                      onTap: () {},
+                                                      child: Icon(Icons.share_outlined, size: 22, color: Theme.of(
+                                                          context)
+                                                          .colorScheme
+                                                          .secondary,),
+                                                    )
                                                   ],
                                                 ),
                                               ],
