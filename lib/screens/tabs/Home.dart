@@ -4,12 +4,15 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:iconly/iconly.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:q/widgets/audioPlayerWidget.dart';
 import 'package:q/widgets/videoPlayerWidget.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../Setting.dart';
 import '../UserProfile.dart';
 import '../comments.dart';
@@ -31,11 +34,13 @@ class _HomePageState extends State<HomePage> {
   bool _isLoading = true;
   TextEditingController _shareTextController =
       TextEditingController(); // Controller to capture text from TextField
+  List<Map<String, dynamic>> posts = [];
 
   @override
   void initState() {
     super.initState();
     _fetchUserData();
+    _fetchPosts();
   }
 
   // Function to fetch user data from Firestore
@@ -59,6 +64,18 @@ class _HomePageState extends State<HomePage> {
       print('Error fetching user data: $e');
     }
   }
+
+
+  // Function to fetch posts (e.g., from Firestore)
+  Future<void> _fetchPosts() async {
+    final firestore = FirebaseFirestore.instance;
+    QuerySnapshot snapshot = await firestore.collection('posts').get();
+
+    setState(() {
+      posts = snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+    });
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -474,8 +491,7 @@ class _HomePageState extends State<HomePage> {
                                                 SizedBox(height: 12),
                                                 Row(
                                                   mainAxisAlignment:
-                                                      MainAxisAlignment
-                                                          .start,
+                                                      MainAxisAlignment.start,
                                                   children: [
                                                     Row(
                                                       children: [
@@ -515,8 +531,10 @@ class _HomePageState extends State<HomePage> {
                                                           },
                                                           child: Icon(
                                                             isLiked
-                                                                ? CupertinoIcons.heart_fill
-                                                                : CupertinoIcons.heart,
+                                                                ? CupertinoIcons
+                                                                    .heart_fill
+                                                                : CupertinoIcons
+                                                                    .heart,
                                                             color: isLiked
                                                                 ? Colors.red
                                                                 : Theme.of(
@@ -574,7 +592,8 @@ class _HomePageState extends State<HomePage> {
                                                         );
                                                       },
                                                       child: Icon(
-                                                        CupertinoIcons.chat_bubble,
+                                                        CupertinoIcons
+                                                            .chat_bubble,
                                                         size: 22,
                                                         color: Theme.of(context)
                                                             .colorScheme
@@ -582,7 +601,6 @@ class _HomePageState extends State<HomePage> {
                                                       ),
                                                     ),
                                                     SizedBox(width: 30),
-
 
                                                     // Repost button
                                                     GestureDetector(
@@ -810,75 +828,87 @@ class _HomePageState extends State<HomePage> {
                                                                     children: [
                                                                       // Repost now button
                                                                       ElevatedButton(
-                                                                      onPressed: () async {
-                                                            try {
-                                                            // Close the modal bottom sheet
-                                                            Navigator.pop(context);
+                                                                        onPressed:
+                                                                            () async {
+                                                                          try {
+                                                                            // Close the modal bottom sheet
+                                                                            Navigator.pop(context);
 
-                                                            // Update post data with sharedBy
-                                                            await FirebaseFirestore.instance.collection('posts').doc(postDoc.id).update({
-                                                            'sharedBy': FieldValue.arrayUnion([_user?.uid]),
-                                                            });
+                                                                            // Update post data with sharedBy
+                                                                            await FirebaseFirestore.instance.collection('posts').doc(postDoc.id).update({
+                                                                              'sharedBy': FieldValue.arrayUnion([
+                                                                                _user?.uid
+                                                                              ]),
+                                                                            });
 
-                                                            // Save shared post information (postId, userId, and shared text)
-                                                            await FirebaseFirestore.instance
-                                                                .collection('users')
-                                                                .doc(_user?.uid)
-                                                                .collection('sharedPosts')
-                                                                .add({
-                                                            'postId': postDoc.id,
-                                                            'userId': _user?.uid,
-                                                            'sharedText': _shareTextController.text,
-                                                            'timestamp': FieldValue.serverTimestamp(),
-                                                            });
+                                                                            // Save shared post information (postId, userId, and shared text)
+                                                                            await FirebaseFirestore.instance.collection('users').doc(_user?.uid).collection('sharedPosts').add({
+                                                                              'postId': postDoc.id,
+                                                                              'userId': _user?.uid,
+                                                                              'sharedText': _shareTextController.text,
+                                                                              'timestamp': FieldValue.serverTimestamp(),
+                                                                            });
 
-                                                            // Optionally, update the current user's shared posts field
-                                                            await FirebaseFirestore.instance.collection('users').doc(_user?.uid).update({
-                                                            'sharedPosts': FieldValue.arrayUnion([postDoc.id]),
-                                                            });
+                                                                            // Optionally, update the current user's shared posts field
+                                                                            await FirebaseFirestore.instance.collection('users').doc(_user?.uid).update({
+                                                                              'sharedPosts': FieldValue.arrayUnion([
+                                                                                postDoc.id
+                                                                              ]),
+                                                                            });
 
-                                                            _shareTextController.clear();
+                                                                            _shareTextController.clear();
 
-                                                            // Show a toast message
-                                                            Fluttertoast.showToast(
-                                                            msg: "Reposted  ✔ ",
-                                                            toastLength: Toast.LENGTH_SHORT,
-                                                            gravity: ToastGravity.TOP,
-                                                            backgroundColor: Colors.green,
-                                                            textColor: Colors.white,
-                                                            fontSize: 14.0,
-                                                            );
+                                                                            // Show a toast message
+                                                                            Fluttertoast.showToast(
+                                                                              msg: "Reposted  ✔ ",
+                                                                              toastLength: Toast.LENGTH_SHORT,
+                                                                              gravity: ToastGravity.TOP,
+                                                                              backgroundColor: Colors.green,
+                                                                              textColor: Colors.white,
+                                                                              fontSize: 14.0,
+                                                                            );
 
-                                                            // Update UI
-                                                            setState(() {});
-                                                            } catch (e) {
-                                                            // Handle errors and show an error toast
-                                                            Fluttertoast.showToast(
-                                                            msg: "Failed to repost: ${e.toString()}",
-                                                            toastLength: Toast.LENGTH_SHORT,
-                                                            gravity: ToastGravity.BOTTOM,
-                                                            backgroundColor: Colors.red,
-                                                            textColor: Colors.white,
-                                                            fontSize: 14.0,
-                                                            );
-                                                            }
-                                                            },
-                                                              style: ElevatedButton.styleFrom(
-                                                                backgroundColor: Colors.blue, // Set background color
-                                                                onPrimary: Colors.white, // Text color
-                                                                shape: RoundedRectangleBorder(
-                                                                  borderRadius: BorderRadius.circular(12), // Rounded corners
-                                                                ),
-                                                                padding: EdgeInsets.symmetric(horizontal: 30, vertical: 5), // Custom padding
-                                                                elevation: 5, // Shadow for the button
-                                                              ),
-                                                              child: Text(
-                                                                'Repost now',
-                                                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                                              ),
-                                                            ),
+                                                                            // Update UI
+                                                                            setState(() {});
+                                                                          } catch (e) {
+                                                                            // Handle errors and show an error toast
+                                                                            Fluttertoast.showToast(
+                                                                              msg: "Failed to repost: ${e.toString()}",
+                                                                              toastLength: Toast.LENGTH_SHORT,
+                                                                              gravity: ToastGravity.BOTTOM,
+                                                                              backgroundColor: Colors.red,
+                                                                              textColor: Colors.white,
+                                                                              fontSize: 14.0,
+                                                                            );
+                                                                          }
+                                                                        },
+                                                                        style: ElevatedButton
+                                                                            .styleFrom(
+                                                                          foregroundColor: Colors
+                                                                              .white,
+                                                                          backgroundColor:
+                                                                              Colors.blue, // Text color
+                                                                          shape:
+                                                                              RoundedRectangleBorder(
+                                                                            borderRadius:
+                                                                                BorderRadius.circular(12), // Rounded corners
+                                                                          ),
+                                                                          padding: EdgeInsets.symmetric(
+                                                                              horizontal: 30,
+                                                                              vertical: 5), // Custom padding
+                                                                          elevation:
+                                                                              5, // Shadow for the button
+                                                                        ),
+                                                                        child:
+                                                                            Text(
+                                                                          'Repost now',
+                                                                          style: TextStyle(
+                                                                              fontSize: 16,
+                                                                              fontWeight: FontWeight.bold),
+                                                                        ),
+                                                                      ),
 
-                                                            // Cancel button
+                                                                      // Cancel button
                                                                       OutlinedButton(
                                                                         onPressed:
                                                                             () {
@@ -887,9 +917,9 @@ class _HomePageState extends State<HomePage> {
                                                                         },
                                                                         style: OutlinedButton
                                                                             .styleFrom(
-                                                                          primary: Theme.of(context)
+                                                                          foregroundColor: Theme.of(context)
                                                                               .colorScheme
-                                                                              .secondary, // Text color
+                                                                              .secondary,
                                                                           side:
                                                                               BorderSide(
                                                                             color:
@@ -935,17 +965,19 @@ class _HomePageState extends State<HomePage> {
                                                         ],
                                                       ),
                                                     ),
-                                                    
-                                                    
+
                                                     //shared button
                                                     SizedBox(width: 30),
                                                     GestureDetector(
-                                                      onTap: () {},
-                                                      child: Icon(Icons.share_outlined, size: 22, color: Theme.of(
-                                                          context)
-                                                          .colorScheme
-                                                          .secondary,),
-                                                    )
+                                                      onTap: () {
+                                                        _shareShowModel(postData); // Pass the post data to the model
+                                                      },
+                                                      child: Icon(
+                                                        Icons.share_outlined,
+                                                        size: 22,
+                                                        color: Theme.of(context).colorScheme.secondary,
+                                                      ),
+                                                    ),
                                                   ],
                                                 ),
                                               ],
@@ -954,7 +986,8 @@ class _HomePageState extends State<HomePage> {
                                           Align(
                                             alignment: Alignment.topRight,
                                             child: GestureDetector(
-                                              onTap: () => _showPostOptions(postData), // Pass the specific post data
+                                              onTap: () => _showPostOptions(
+                                                  postData), // Pass the specific post data
                                               child: Icon(
                                                 Icons.more_vert,
                                                 color: Colors.black26,
@@ -984,6 +1017,10 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
+
+
+
 
   // Method to show bottom sheet options
   void _showPostOptions(Map<String, dynamic> postData) async {
@@ -1063,7 +1100,7 @@ class _HomePageState extends State<HomePage> {
           .collection('savedPosts');
 
       final existingPost =
-      await savedPostsRef.where('postId', isEqualTo: postId).get();
+          await savedPostsRef.where('postId', isEqualTo: postId).get();
 
       return existingPost.docs.isNotEmpty;
     } catch (e) {
@@ -1087,11 +1124,11 @@ class _HomePageState extends State<HomePage> {
     try {
       // Reference to the saved posts collection
       final savedPostsRef =
-      firestore.collection('users').doc(userId).collection('savedPosts');
+          firestore.collection('users').doc(userId).collection('savedPosts');
 
       // Check if the post is already saved
       final existingPost =
-      await savedPostsRef.where('postId', isEqualTo: postData['id']).get();
+          await savedPostsRef.where('postId', isEqualTo: postData['id']).get();
 
       if (existingPost.docs.isNotEmpty) {
         // Post already saved, remove it
@@ -1129,5 +1166,215 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void _shareShowModel(Map<String, dynamic> postData) {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Wrap(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(15, 15, 15, 35),
+              child: Column(
+                children: [
+                  Text(
+                    'Share post',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                  ),
+                  SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Fetch user data (name and profile) based on userId
+                      StreamBuilder<DocumentSnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(postData['userId']) // Fetch the user data using the userId from the post
+                            .snapshots(),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasError) {
+                            return Icon(Icons.error);
+                          }
 
+                          if (!snapshot.hasData || !snapshot.data!.exists) {
+                            return Icon(
+                              Icons.account_circle,
+                              size: 20,
+                              color: Theme.of(context).colorScheme.tertiary,
+                            );
+                          }
+
+                          // Get the user data from Firestore
+                          Map<String, dynamic>? userData = snapshot.data!.data() as Map<String, dynamic>?;
+
+                          // Get the user's profile image and name
+                          String userName = userData?['name'] ?? 'Unknown User'; // Fetch the name
+                          String profileUrl = userData?['profile'] ?? ''; // Fetch the profile image URL
+
+                          return Row(
+                            children: [
+                              // Show user's profile picture
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundImage: profileUrl.isNotEmpty
+                                    ? CachedNetworkImageProvider(profileUrl) // If profile URL is not empty, show the image
+                                    : null,
+                                backgroundColor: Colors.transparent,
+                              ),
+                              // Show user's name
+                              SizedBox(width: 10,),
+                              Column(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    userName,
+                                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
+                                  ),
+                                  Text(
+                                    'via Direct Message', // Or any other appropriate description
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w400,
+                                        color: Theme.of(context).colorScheme.secondary),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 15),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 37,
+                          height: 37,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.secondary.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(50),
+                          ),
+                          child: Icon(CupertinoIcons.mail, size: 17),
+                        ),
+                        SizedBox(width: 9),
+                        Text('Send via Direct Message', style: TextStyle(fontSize: 17)),
+                      ],
+                    ),
+                  ),
+                  Divider(),
+                  SizedBox(height: 15),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.pop(context); // Close the modal
+                          String postText = postData['text'] ?? ''; // Ensure it's not null
+                          String postUrl = postData['mediaUrl'] ?? ''; // Ensure it's not null
+
+                          // Check if both postText and postUrl are not empty before sharing
+                          if (postText.isNotEmpty || postUrl.isNotEmpty) {
+                            Share.share('$postText\n$postUrl'); // Share the post text and URL
+                          } else {
+                            // If there's no content to share, show a snackbar or alert
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Nothing to share!')),
+                            );
+                          }
+                        },
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start, // Align to left side
+                          children: [
+                            Container(
+                              width: 50,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.secondary.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(50),
+                              ),
+                              child: Icon(Icons.share_outlined),
+                            ),
+                            SizedBox(height: 5),
+                            Text('Share via...', style: TextStyle(fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: 20),
+
+                      GestureDetector(
+                        onTap: () {
+                          // Copy the post link to the clipboard
+                          String postUrl = postData['mediaUrl'] ?? ''; // Get the post URL
+                          if (postUrl.isNotEmpty) {
+                            Clipboard.setData(ClipboardData(text: postUrl)); // Copy URL to clipboard
+                            Navigator.of(context).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Media link copied!')),
+                            );
+                          } else {
+                            // If no URL exists, show a message
+                            Navigator.of(context).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('❗ No media found.')),
+                            );
+                          }
+                        },
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start, // Align to the left side
+                          children: [
+                            Container(
+                              width: 50,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.secondary.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(50)),
+                              child: Icon(CupertinoIcons.link),
+                            ),
+                            SizedBox(height: 5),
+                            Text('Copy link', style: TextStyle(fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 5),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+
+
+  // Function to handle "Send to User"
+  void _sendToUser(BuildContext context) {
+    // Example of opening a user selection dialog
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Select User'),
+          content:
+              Text('Feature to send to specific user is under development.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
