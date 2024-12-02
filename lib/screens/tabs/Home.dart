@@ -9,10 +9,12 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:iconly/iconly.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:q/Messages/userList.dart';
 import 'package:q/widgets/audioPlayerWidget.dart';
 import 'package:q/widgets/videoPlayerWidget.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../models/messageModel.dart';
 import '../Setting.dart';
 import '../UserProfile.dart';
 import '../comments.dart';
@@ -1184,87 +1186,151 @@ class _HomePageState extends State<HomePage> {
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
                   ),
                   SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Fetch user data (name and profile) based on userId
-                      StreamBuilder<DocumentSnapshot>(
-                        stream: FirebaseFirestore.instance
-                            .collection('users')
-                            .doc(postData['userId']) // Fetch the user data using the userId from the post
-                            .snapshots(),
-                        builder: (context, snapshot) {
-                          if (snapshot.hasError) {
-                            return Icon(Icons.error);
-                          }
+                  // Fetching recent conversations
+                  StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('messages')
+                        .where('participants', arrayContains: FirebaseAuth.instance.currentUser?.uid)
+                        .orderBy('timestamp', descending: true)
+                        .limit(3) // Limit to the 3 most recent conversations
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasError) {
+                        return Icon(Icons.error);
+                      }
 
-                          if (!snapshot.hasData || !snapshot.data!.exists) {
-                            return Icon(
-                              Icons.account_circle,
-                              size: 20,
-                              color: Theme.of(context).colorScheme.tertiary,
-                            );
-                          }
+                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                        return SizedBox.shrink();
+                      }
 
-                          // Get the user data from Firestore
-                          Map<String, dynamic>? userData = snapshot.data!.data() as Map<String, dynamic>?;
+                      // Track unique users using a Set
+                      Set<String> processedUserIds = Set<String>();
 
-                          // Get the user's profile image and name
-                          String userName = userData?['name'] ?? 'Unknown User'; // Fetch the name
-                          String profileUrl = userData?['profile'] ?? ''; // Fetch the profile image URL
+                      // Fetching the list of users for the recent conversations
+                      List<Widget> recentUsersWidgets = [];
 
-                          return Row(
-                            children: [
-                              // Show user's profile picture
-                              CircleAvatar(
-                                radius: 18,
-                                backgroundImage: profileUrl.isNotEmpty
-                                    ? CachedNetworkImageProvider(profileUrl) // If profile URL is not empty, show the image
-                                    : null,
-                                backgroundColor: Colors.transparent,
-                              ),
-                              // Show user's name
-                              SizedBox(width: 10,),
-                              Column(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    userName,
-                                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
+                      for (var doc in snapshot.data!.docs) {
+                        // Get the list of participants in the conversation (both userIds)
+                        List<String> participants = List<String>.from(doc['participants']);
+
+                        // Get the other user's ID by excluding the current user's ID
+                        String otherUserId = participants.firstWhere(
+                              (userId) => userId != FirebaseAuth.instance.currentUser?.uid,
+                          orElse: () => '',
+                        );
+
+                        // If the user ID is not empty and hasn't been processed yet, add to the list
+                        if (otherUserId.isNotEmpty && !processedUserIds.contains(otherUserId)) {
+                          processedUserIds.add(otherUserId); // Mark this user as processed
+
+                          // Fetch the user data for the other user in the conversation
+                          recentUsersWidgets.add(
+                            StreamBuilder<DocumentSnapshot>(
+                              stream: FirebaseFirestore.instance
+                                  .collection('users')
+                                  .doc(otherUserId) // Get the data for the other user
+                                  .snapshots(),
+                              builder: (context, userSnapshot) {
+                                if (userSnapshot.hasError) {
+                                  return Icon(Icons.error);
+                                }
+
+                                if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+                                  return Icon(
+                                    Icons.account_circle,
+                                    size: 20,
+                                    color: Theme.of(context).colorScheme.tertiary,
+                                  );
+                                }
+
+                                // Get the user's profile data
+                                Map<String, dynamic>? userData = userSnapshot.data!.data() as Map<String, dynamic>?;
+                                String userName = userData?['name'] ?? 'Unknown User';
+                                String profileUrl = userData?['profile'] ?? '';
+
+                                return GestureDetector(
+                                  onTap: () {
+                                    _sendPostToUser(postData); // Pass postData to send to the selected user
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 10.0), // Add vertical padding
+                                    child: Row(
+                                      children: [
+                                        // Show user's profile picture
+                                        CircleAvatar(
+                                          radius: 18,
+                                          backgroundImage: profileUrl.isNotEmpty
+                                              ? CachedNetworkImageProvider(profileUrl) // If profile URL is not empty, show the image
+                                              : null,
+                                          backgroundColor: Colors.transparent,
+                                        ),
+                                        SizedBox(width: 10),
+                                        Column(
+                                          mainAxisAlignment: MainAxisAlignment.start,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              userName,
+                                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
+                                            ),
+                                            Text(
+                                              'via Direct Message', // Or any other appropriate description
+                                              style: TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w400,
+                                                  color: Theme.of(context).colorScheme.secondary),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                  Text(
-                                    'via Direct Message', // Or any other appropriate description
-                                    style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w400,
-                                        color: Theme.of(context).colorScheme.secondary),
-                                  ),
-                                ],
-                              ),
-                            ],
+                                );
+                              },
+                            ),
                           );
-                        },
-                      ),
-                    ],
+                        }
+
+                        // If 3 unique users have been processed, break the loop
+                        if (processedUserIds.length >= 3) break;
+                      }
+
+                      // Return a ListView of recent conversations (only 3 users will be displayed)
+                      return ListView(
+                        shrinkWrap: true,
+                        children: recentUsersWidgets,
+                      );
+                    },
                   ),
+
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 15),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 37,
-                          height: 37,
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.secondary.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(50),
+                    padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 10),
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => MessageUserListPage(
+                              postData: postData, // Pass the entire post data here
+                            ),
                           ),
-                          child: Icon(CupertinoIcons.mail, size: 17),
-                        ),
-                        SizedBox(width: 9),
-                        Text('Send via Direct Message', style: TextStyle(fontSize: 17)),
-                      ],
+                        );
+                      },
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 37,
+                            height: 37,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.secondary.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(50),
+                            ),
+                            child: Icon(CupertinoIcons.mail, size: 17),
+                          ),
+                          SizedBox(width: 9),
+                          Text('Send via Direct Message', style: TextStyle(fontSize: 17)),
+                        ],
+                      ),
                     ),
                   ),
                   Divider(),
@@ -1357,24 +1423,93 @@ class _HomePageState extends State<HomePage> {
 
 
 
-  // Function to handle "Send to User"
-  void _sendToUser(BuildContext context) {
-    // Example of opening a user selection dialog
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Select User'),
-          content:
-              Text('Feature to send to specific user is under development.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('OK'),
-            ),
-          ],
-        );
-      },
+
+  Future<void> _sendPostToUser(Map<String, dynamic> postData) async {
+    // Get the sender's user ID
+    String? senderId = FirebaseAuth.instance.currentUser?.uid;
+
+    if (senderId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to get sender information')),
+      );
+      return;
+    }
+
+    // Assuming postId is passed via widget or provided in postData
+    String postId = postData['id'];
+
+    // Query the messages collection to get the receiverId
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('messages')
+        .where('participants', arrayContains: senderId)
+        .orderBy('timestamp', descending: true) // Get the most recent message
+        .limit(1) // Limit to one message
+        .get();
+
+    if (querySnapshot.docs.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No conversation found for this post')),
+      );
+      return;
+    }
+
+    // Extract the receiverId from the message
+    String receiverId = '';
+    for (var doc in querySnapshot.docs) {
+      List<String> participants = List<String>.from(doc['participants']);
+      receiverId = participants.firstWhere(
+            (userId) => userId != senderId, // Get the other user as receiverId
+        orElse: () => '',
+      );
+    }
+
+    if (receiverId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Receiver not found')),
+      );
+      return;
+    }
+
+    Navigator.of(context).pop();
+
+    // Create a unique message ID
+    String messageId = FirebaseFirestore.instance.collection('messages').doc().id;
+
+    // Create participants list
+    List<String> participants = [senderId, receiverId];
+
+    // Construct message data
+    Message message = Message(
+      id: messageId,
+      senderId: senderId,
+      receiverId: receiverId,
+      participants: participants,
+      text: null, // No text, as this is a post-sharing message
+      mediaUrl: null, // No media URL for this example
+      mediaType: MediaType.text, // Assuming text for post-sharing
+      postId: postId, // Include postId
+      timestamp: Timestamp.now(),
+    );
+
+    // Save message to Firestore
+    await FirebaseFirestore.instance
+        .collection('messages')
+        .doc(messageId)
+        .set(message.toMap());
+
+    // Notify user and show a SnackBar
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.check_circle, color: Colors.green, size: 17,),
+          SizedBox(width: 5,),
+          Text('Post sent !', style: TextStyle(fontWeight: FontWeight.w700),),
+        ],
+      ),
+      ),
     );
   }
+
+
 }

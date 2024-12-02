@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
@@ -11,6 +12,7 @@ import 'package:intl/intl.dart';
 import 'package:q/Messages/userMessageProfile.dart';
 
 import '../models/messageModel.dart';
+import '../screens/postDetails.dart';
 import '../widgets/fullScreenImageWidget.dart';
 import '../widgets/messageVideoPlayWidget.dart';
 import '../widgets/videoPlayerWidget.dart';
@@ -18,9 +20,14 @@ import '../widgets/videoPlayerWidget.dart';
 class UserMessagePage extends StatefulWidget {
   final String userId;
   final String userName;
+  final Map<String, dynamic> postData; // Accept post data
 
-  const UserMessagePage(
-      {super.key, required this.userId, required this.userName});
+  const UserMessagePage({
+    Key? key,
+    required this.userId,
+    required this.userName,
+    required this.postData,
+  }) : super(key: key);
 
   @override
   State<UserMessagePage> createState() => _UserMessagePageState();
@@ -34,25 +41,26 @@ class _UserMessagePageState extends State<UserMessagePage> {
         .get();
   }
 
-  TextEditingController _messageController = TextEditingController();
+  final TextEditingController _messageController = TextEditingController();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   File? _selectedImage;
   File? _selectedVideo;
-  ValueNotifier<bool> _isSendButtonVisible = ValueNotifier(false);
+  final ValueNotifier<bool> _isSendButtonVisible = ValueNotifier(false);
   bool _isBlocked = false;
   bool _isBlockedBy = false;
-  late String _currentUserId = FirebaseAuth.instance.currentUser!.uid.toString();
-
+  late final String _currentUserId;
 
 
   @override
   void initState() {
     super.initState();
+    _currentUserId = FirebaseAuth.instance.currentUser!.uid;
     _messageController.addListener(() {
       _isSendButtonVisible.value = _messageController.text.isNotEmpty;
     });
     _checkIfBlocked();
   }
+
 
 
 
@@ -515,413 +523,561 @@ class _UserMessagePageState extends State<UserMessagePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leadingWidth: 35,
-        title: FutureBuilder<DocumentSnapshot>(
-          future: _getUserData(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Text(
-                'Loading....',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.w400,
-                  letterSpacing: 1.0,
-                ),
-              );
-            }
-            if (!snapshot.hasData || !snapshot.data!.exists) {
-              return Text(
-                'User not found',
-                style: TextStyle(color: Theme.of(context).colorScheme.primary),
-              );
-            }
-
-            var userData = snapshot.data!.data() as Map<String, dynamic>;
-            var profileUrl =
-                userData['profile'] ?? 'https://via.placeholder.com/150';
-
-            return GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => UserMessageProfilePage(
-                      userId: widget.userId, // Make sure this is set correctly
-                      profileUrl: profileUrl,
-                      currentUserId:
-                          FirebaseAuth.instance.currentUser!.uid.toString(),
-                    ),
+        backgroundColor: Theme
+            .of(context)
+            .colorScheme
+            .background,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leadingWidth: 35,
+          title: FutureBuilder<DocumentSnapshot>(
+            future: _getUserData(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Text(
+                  'Loading....',
+                  style: TextStyle(
+                    color: Theme
+                        .of(context)
+                        .colorScheme
+                        .primary,
+                    fontWeight: FontWeight.w400,
+                    letterSpacing: 1.0,
                   ),
                 );
-              },
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundImage: NetworkImage(profileUrl),
-                  ),
-                  SizedBox(width: 10),
-                  Text(
-                    widget.userName,
-                    style:
-                        TextStyle(color: Theme.of(context).colorScheme.primary),
-                  ),
-                ],
-              ),
-            );
-          },
+              }
+              if (!snapshot.hasData || !snapshot.data!.exists) {
+                return Text(
+                  'User not found',
+                  style: TextStyle(color: Theme
+                      .of(context)
+                      .colorScheme
+                      .primary),
+                );
+              }
+
+              var userData = snapshot.data!.data() as Map<String, dynamic>;
+              var profileUrl =
+                  userData['profile'] ?? 'https://via.placeholder.com/150';
+
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          UserMessageProfilePage(
+                            userId: widget.userId,
+                            // Make sure this is set correctly
+                            profileUrl: profileUrl,
+                            currentUserId:
+                            FirebaseAuth.instance.currentUser!.uid.toString(),
+                          ),
+                    ),
+                  );
+                },
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundImage: NetworkImage(profileUrl),
+                    ),
+                    SizedBox(width: 10),
+                    Text(
+                      widget.userName,
+                      style:
+                      TextStyle(color: Theme
+                          .of(context)
+                          .colorScheme
+                          .primary),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: _firestore
-                  .collection('messages')
-                  .where('participants', arrayContainsAny: [
-                    FirebaseAuth.instance.currentUser?.uid,
-                    widget.userId
-                  ])
-                  .orderBy('timestamp', descending: true)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return Center(
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: _firestore
+                    .collection('messages')
+                    .where('participants',
+                    arrayContains: FirebaseAuth.instance.currentUser?.uid)
+                    .orderBy('timestamp', descending: true)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return Center(
                       child: Text(
-                    'Say, Hi😊.',
-                    style: TextStyle(
-                        fontSize: 15,
-                        color: Colors.black38,
-                        fontWeight: FontWeight.w300),
-                  ));
-                }
+                        'Say, Hi😊.',
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: Colors.black38,
+                          fontWeight: FontWeight.w300,
+                        ),
+                      ),
+                    );
+                  }
 
-                var messages = snapshot.data!.docs
-                    .map((doc) =>
-                        Message.fromMap(doc.data() as Map<String, dynamic>))
-                    .toList();
-                var filteredMessages = messages.where((message) {
-                  return (message.senderId ==
-                              FirebaseAuth.instance.currentUser?.uid &&
-                          message.receiverId == widget.userId) ||
-                      (message.senderId == widget.userId &&
-                          message.receiverId ==
-                              FirebaseAuth.instance.currentUser?.uid);
-                }).toList();
+                  var messages = snapshot.data!.docs
+                      .map((doc) =>
+                      Message.fromMap(doc.data() as Map<String, dynamic>))
+                      .toList();
 
-                if (filteredMessages.isEmpty) {
-                  return Center(
-                      child: Text(
-                    'Say, Hi😊.',
-                    style: TextStyle(
-                        fontSize: 15,
-                        color: Colors.black38,
-                        fontWeight: FontWeight.w300),
-                  ));
-                }
+                  var filteredMessages = messages.where((message) {
+                    return (message.senderId ==
+                        FirebaseAuth.instance.currentUser?.uid &&
+                        message.receiverId == widget.userId) ||
+                        (message.senderId == widget.userId &&
+                            message.receiverId ==
+                                FirebaseAuth.instance.currentUser?.uid);
+                  }).toList();
 
-                return ListView.builder(
-                  reverse: true,
-                  itemCount: filteredMessages.length,
-                  itemBuilder: (context, index) {
-                    var message = filteredMessages[index];
-                    bool isSender = message.senderId ==
-                        FirebaseAuth.instance.currentUser?.uid;
-                    return Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Column(
-                        crossAxisAlignment: isSender
-                            ? CrossAxisAlignment.end
-                            : CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (isSender) Spacer(),
-                              if (!isSender) SizedBox(width: 0),
-                              IntrinsicWidth(
-                                child: message.mediaType == MediaType.text
-                                    ? GestureDetector(
+                  return ListView.builder(
+                    reverse: true,
+                    itemCount: filteredMessages.length,
+                    itemBuilder: (context, index) {
+                      var message = filteredMessages[index];
+                      bool isSender = message.senderId == FirebaseAuth.instance.currentUser?.uid;
+
+                      return FutureBuilder<DocumentSnapshot>(
+                        future: message.postId != null && message.postId!.isNotEmpty
+                            ? FirebaseFirestore.instance.collection('posts').doc(message.postId).get()
+                            : null,
+                        builder: (context, postSnapshot) {
+                          if (postSnapshot.connectionState == ConnectionState.waiting) {
+                            return Center(child: CircularProgressIndicator());
+                          }
+
+                          Map<String, dynamic>? postData;
+                          if (postSnapshot.hasData && postSnapshot.data != null) {
+                            postData = postSnapshot.data!.data() as Map<String, dynamic>;
+                          }
+
+                          return Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Column(
+                              crossAxisAlignment: isSender ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (isSender) Spacer(),
+                                    IntrinsicWidth(
+                                      child: message.postId != null && postData != null
+                                          ? GestureDetector(
+                                        onTap: () async {
+                                          try {
+                                            // Fetch user data from Firestore
+                                            final userDoc = await FirebaseFirestore.instance
+                                                .collection('users')
+                                                .doc(postData?['userId']) // Assuming the post includes a 'userId'
+                                                .get();
+
+                                            if (userDoc.exists) {
+                                              final userData = userDoc.data();
+
+                                              // Fetch comments for the post
+                                              final commentsSnapshot = await FirebaseFirestore.instance
+                                                  .collection('comments')
+                                                  .where('postId', isEqualTo: postData?['id']) // Assuming postId is stored in comments
+                                                  .get();
+
+                                              final comments = commentsSnapshot.docs.map((doc) => doc.data()).toList();
+
+                                              // Fetch likes from the post data
+                                              final likedData = postData?['likedBy'] ?? []; // Assuming likedData is an array in the post
+
+                                              // Navigate to PostDetailsPage with all required information
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) => PostDetailsPage(
+                                                    postId: postData?['id'] ?? '', // Post ID
+                                                    mediaUrl: postData?['mediaUrl'] ?? '', // Media URL
+                                                    text: postData?['text'] ?? '', // Post text
+                                                    username: userData?['name'] ?? 'Unknown User', // User name
+                                                    profilePictureUrl: userData?['profile'] ?? '', // Profile picture
+                                                    comments: comments, // Pass fetched comments
+                                                    postTime: postData?['timestamp'] ?? '', // Post time
+                                                    likedData: likedData, // Pass fetched likes data
+                                                    userIDs: userData?['userId'] ?? '', // User ID
+                                                    fileType: postData?['fileType'] ?? '', // File type
+                                                  ),
+                                                ),
+                                              );
+                                            } else {
+                                              // Handle user data not found
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(content: Text('User not found')),
+                                              );
+                                            }
+                                          } catch (e) {
+                                            // Handle errors
+                                            print('Error fetching user data: $e');
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('Error fetching user details')),
+                                            );
+                                          }
+                                        },
+
+
+                                        child: Container(
+                                          padding: const EdgeInsets.only(top: 0, bottom: 10, left: 10, right: 10),
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(20),
+                                            border: Border.all(
+                                              color: Colors.grey.shade400, // Border color
+                                              width: 1.0, // Border width
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withOpacity(0.1), // Shadow color
+                                                spreadRadius: 0, // How much the shadow spreads
+                                                blurRadius: 2, // How soft or sharp the shadow appears
+                                                offset: Offset(0, 3), // X and Y offset for the shadow
+                                              ),
+                                            ],
+                                          ),
+
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              FutureBuilder<DocumentSnapshot>(
+                                                future: postData['userId'] != null
+                                                    ? FirebaseFirestore.instance.collection('users').doc(postData['userId']).get()
+                                                    : null,
+                                                builder: (context, userSnapshot) {
+                                                  if (userSnapshot.connectionState == ConnectionState.waiting) {
+                                                    return Center(child: CircularProgressIndicator());
+                                                  }
+
+                                                  Map<String, dynamic>? userData;
+                                                  if (userSnapshot.hasData && userSnapshot.data != null) {
+                                                    userData = userSnapshot.data!.data() as Map<String, dynamic>;
+                                                  }
+
+                                                  return Padding(
+                                                    padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
+                                                    child: Row(
+                                                      children: [
+                                                        if (userData != null && userData['profile'] != null)
+                                                          CircleAvatar(
+                                                            backgroundImage: NetworkImage(userData['profile']),
+                                                            radius: 18,
+                                                          )
+                                                        else
+                                                          CircleAvatar(
+                                                            backgroundColor: Colors.grey,
+                                                            radius: 18,
+                                                            child: Icon(Icons.person, color: Colors.white),
+                                                          ),
+                                                        SizedBox(width: 8),
+                                                        if (userData != null && userData['name'] != null)
+                                                          Text(
+                                                            userData['name'],
+                                                            style: TextStyle(
+                                                              fontWeight: FontWeight.bold,
+                                                              color: isSender ? Theme.of(context).colorScheme.primary : Colors.black,
+                                                              fontSize: 15
+                                                            ),
+                                                          ),
+                                                      ],
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                              if (postData['text'] != null && postData['text'].isNotEmpty)
+                                                Padding(
+                                                  padding: const EdgeInsets.fromLTRB(5, 8, 10, 0),
+                                                  child: Row(
+                                                    children: [
+                                                      Text(
+                                                        postData['text'],
+                                                        style: TextStyle(
+                                                          fontSize: 15,
+                                                          color: isSender ? Theme.of(context).colorScheme.primary : Colors.black,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              SizedBox(height: 8),
+                                              if (postData['mediaUrl'] != null && postData['mediaUrl'].isNotEmpty)
+                                                ClipRRect(
+                                                  borderRadius: BorderRadius.circular(20),
+                                                  child: CachedNetworkImage(
+                                                    imageUrl: postData['mediaUrl'],
+                                                    fit: BoxFit.cover,
+                                                    height: 315,
+                                                    width: 250,
+                                                    placeholder: (context, url) => Container(
+                                                      height: 315,
+                                                      width: 250,
+                                                      color: Colors.grey.shade200,
+                                                      child: Center(
+                                                        child: CircularProgressIndicator(),
+                                                      ),
+                                                    ),
+                                                    errorWidget: (context, url, error) => Container(
+                                                      height: 315,
+                                                      width: 250,
+                                                      color: Colors.grey.shade200,
+                                                      child: Icon(
+                                                        Icons.broken_image,
+                                                        color: Colors.grey,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                      )
+                                          : message.mediaType == MediaType.text
+                                          ? GestureDetector(
                                         onLongPress: () {
-                                          _onLongPressText(message.id,
-                                              message.text.toString());
+                                          _onLongPressText(message.id, message.text.toString());
                                         },
                                         child: Container(
-                                          constraints: BoxConstraints(
-                                            maxWidth:
-                                                250, // Adjust max width as needed
-                                          ),
-                                          padding: EdgeInsets.fromLTRB(
-                                              12, 12, 12, 12),
+                                          constraints: BoxConstraints(maxWidth: 250),
+                                          padding: EdgeInsets.all(12),
                                           decoration: BoxDecoration(
                                             color: isSender
                                                 ? Colors.blue
                                                 : Theme.of(context)
-                                                    .colorScheme
-                                                    .primary
-                                                    .withOpacity(0.1),
+                                                .colorScheme
+                                                .primary
+                                                .withOpacity(0.1),
                                             borderRadius: BorderRadius.only(
                                               topRight: Radius.circular(20),
                                               topLeft: Radius.circular(20),
-                                              bottomLeft: Radius.circular(
-                                                  isSender ? 20 : 0),
-                                              bottomRight: Radius.circular(
-                                                  isSender ? 0 : 20),
+                                              bottomLeft: Radius.circular(isSender ? 20 : 0),
+                                              bottomRight: Radius.circular(isSender ? 0 : 20),
                                             ),
                                           ),
                                           child: Text(
                                             message.text ?? '',
                                             style: TextStyle(
                                               fontSize: 15,
-                                              color: isSender
-                                                  ? Colors.white
-                                                  : Colors.black,
+                                              color: isSender ? Colors.white : Colors.black,
                                             ),
-                                            textAlign: isSender
-                                                ? TextAlign.start
-                                                : TextAlign.start,
-                                            overflow: TextOverflow
-                                                .visible, // Allow text to wrap
                                           ),
                                         ),
                                       )
-                                    : message.mediaType == MediaType.image
-                                        ? GestureDetector(
-                                            onTap: () {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      FullScreenImage(
-                                                          imageUrl: message
-                                                                  .mediaUrl ??
-                                                              ''),
-                                                ),
-                                              );
-                                            },
-                                            onLongPress: () {
-                                              _onLongPressImage(message.id,
-                                                  message.mediaUrl ?? '');
-                                            },
-                                            child: SizedBox(
-                                              width:
-                                                  200, // Adjust width as per your requirement
-                                              height:
-                                                  325, // Adjust height as per your requirement
-                                              child: ClipRRect(
-                                                borderRadius: BorderRadius.circular(
-                                                    20), // Adjust the radius as per your requirement
-                                                child: Image.network(
-                                                  message.mediaUrl ?? '',
-                                                  fit: BoxFit.cover,
-                                                ),
+                                          : message.mediaType == MediaType.image
+                                          ? GestureDetector(
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => FullScreenImage(
+                                                imageUrl: message.mediaUrl ?? '',
                                               ),
                                             ),
-                                          )
-                                        : GestureDetector(
-                                            onLongPress: () {
-                                              _onLongPressVideo(message.id,
-                                                  message.mediaUrl.toString());
-                                            },
-                                            child: SizedBox(
-                                              width:
-                                                  200, // Adjust width as per your requirement
-                                              height:
-                                                  350, // Adjust height as per your requirement
-                                              child: VideoPlayWidget(
-                                                  videoUrl:
-                                                      message.mediaUrl ?? ''),
-                                            ),
+                                          );
+                                        },
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(20),
+                                          child: Image.network(
+                                            message.mediaUrl ?? '',
+                                            fit: BoxFit.cover,
+                                            height: 300,
+                                            width: 200,
                                           ),
-                              ),
-                              if (!isSender) Spacer(),
-                              if (isSender) SizedBox(width: 0),
-                            ],
-                          ),
-                          SizedBox(height: 5),
-                          Text(
-                            _formatTimestamp(message.timestamp),
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey,
+                                        ),
+                                      )
+                                          : GestureDetector(
+                                        onLongPress: () {
+                                          _onLongPressVideo(message.id, message.mediaUrl.toString());
+                                        },
+                                        child: VideoPlayWidget(
+                                          videoUrl: message.mediaUrl ?? '',
+                                        ),
+                                      ),
+                                    ),
+                                    if (!isSender) Spacer(),
+                                  ],
+                                ),
+                                SizedBox(height: 5),
+                                Text(
+                                  _formatTimestamp(message.timestamp),
+                                  style: TextStyle(fontSize: 10, color: Colors.grey),
+                                ),
+                              ],
                             ),
-                            textAlign:
-                                isSender ? TextAlign.end : TextAlign.start,
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                );
-              },
+                          );
+                        },
+                      );
+                    },
+                  );
+
+                },
+              ),
             ),
-          ),
-          if (_selectedImage != null || _selectedVideo != null)
-            Stack(
-              children: [
-                Container(
-                  margin: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-                  height: 100,
-                  width: 80,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    image: _selectedImage != null
-                        ? DecorationImage(
-                            image: FileImage(_selectedImage!),
-                            fit: BoxFit.cover,
-                          )
+            if (_selectedImage != null || _selectedVideo != null)
+              Stack(
+                children: [
+                  Container(
+                    margin: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                    height: 100,
+                    width: 80,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      image: _selectedImage != null
+                          ? DecorationImage(
+                        image: FileImage(_selectedImage!),
+                        fit: BoxFit.cover,
+                      )
+                          : null,
+                    ),
+                    child: _selectedVideo != null
+                        ? MessageVideoPlayerWidget(videoFile: _selectedVideo!)
                         : null,
                   ),
-                  child: _selectedVideo != null
-                      ? MessageVideoPlayerWidget(videoFile: _selectedVideo!)
-                      : null,
-                ),
-                Positioned(
-                  right: 13,
-                  top: 13,
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedImage = null;
-                        _selectedVideo = null;
-                        _isSendButtonVisible.value = false;
-                      });
-                    },
-                    child: Container(
-                      height: 20,
-                      width: 20,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
-                        borderRadius: BorderRadius.circular(50),
-                      ),
-                      child: Icon(
-                        Icons.close_rounded,
-                        color: Colors.white,
-                        size: 13,
+                  Positioned(
+                    right: 13,
+                    top: 13,
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedImage = null;
+                          _selectedVideo = null;
+                          _isSendButtonVisible.value = false;
+                        });
+                      },
+                      child: Container(
+                        height: 20,
+                        width: 20,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.7),
+                          borderRadius: BorderRadius.circular(50),
+                        ),
+                        child: Icon(
+                          Icons.close_rounded,
+                          color: Colors.white,
+                          size: 13,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            color: Colors.white,
-            child: Row(
-              children: [
-                Expanded(
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        if (_isBlocked) ...[
+                ],
+              ),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              color: Colors.white,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _isBlocked || _isBlockedBy
+                        ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
                           Text(
-                            'You are blocked.',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                            _isBlocked
+                                ? 'You are blocked.'
+                                : 'This user has blocked you.',
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.w600),
                           ),
                           SizedBox(height: 2),
                           Text(
                             "You can't send a message to ${widget.userName}.",
-                            style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.secondary),
-                          ),
-                        ] else if (_isBlockedBy) ...[
-                          Text(
-                            'This user has blocked.',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                          ),
-                          SizedBox(height: 2),
-                          Text(
-                            "You can't send a message to ${widget.userName}.",
-                            style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.secondary),
-                          ),
-                        ] else ...[
-                          TextField(
-                            controller: _messageController,
-                            decoration: InputDecoration(
-                              hintText: 'Type your message...',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              suffixIcon: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    onPressed: _selectMedia,
-                                    icon: Icon(CupertinoIcons.link),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            maxLines: null,
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .secondary),
                           ),
                         ],
-                      ],
+                      ),
+                    )
+                        : TextField(
+                      controller: _messageController,
+                      decoration: InputDecoration(
+                        hintText: 'Type your message...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        suffixIcon: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              onPressed: _selectMedia,
+                              icon: Icon(CupertinoIcons.link),
+                            ),
+                          ],
+                        ),
+                      ),
+                      maxLines: null,
                     ),
                   ),
-                ),
-                SizedBox(width: 5),
-                ValueListenableBuilder<bool>(
-                  valueListenable: _isSendButtonVisible,
-                  builder: (context, isVisible, child) {
-                    return isVisible ||
-                            _selectedImage != null ||
-                            _selectedVideo != null
-                        ? Container(
-                            height: 55,
-                            width: 55,
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.tertiary,
-                              borderRadius: BorderRadius.circular(50),
-                            ),
-                            child: IconButton(
-                              icon: Icon(
-                                Icons.send_rounded,
-                                color: Theme.of(context).colorScheme.onTertiary,
-                                size: 25,
-                              ),
-                              onPressed: () async {
-                                if (_selectedImage != null) {
-                                  String mediaUrl = await _uploadMedia(
-                                      _selectedImage!, MediaType.image);
-                                  _sendMessage(
-                                      mediaUrl: mediaUrl,
-                                      mediaType: MediaType.image);
-                                } else if (_selectedVideo != null) {
-                                  String mediaUrl = await _uploadMedia(
-                                      _selectedVideo!, MediaType.video);
-                                  _sendMessage(
-                                      mediaUrl: mediaUrl,
-                                      mediaType: MediaType.video);
-                                } else {
-                                  _sendMessage(text: _messageController.text);
-                                }
-                              },
-                            ),
-                          )
-                        : Container(); // Empty container if not visible
-                  },
-                ),
-              ],
+                  SizedBox(width: 5),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: _isSendButtonVisible,
+                    builder: (context, isVisible, child) {
+                      return isVisible ||
+                          _selectedImage != null ||
+                          _selectedVideo != null
+                          ? Container(
+                        height: 55,
+                        width: 55,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.tertiary,
+                          borderRadius: BorderRadius.circular(50),
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.send_rounded,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onTertiary,
+                            size: 25,
+                          ),
+                          onPressed: () async {
+                            if (_selectedImage != null) {
+                              String mediaUrl = await _uploadMedia(
+                                  _selectedImage!, MediaType.image);
+                              _sendMessage(
+                                  mediaUrl: mediaUrl,
+                                  mediaType: MediaType.image);
+                            } else if (_selectedVideo != null) {
+                              String mediaUrl = await _uploadMedia(
+                                  _selectedVideo!, MediaType.video);
+                              _sendMessage(
+                                  mediaUrl: mediaUrl,
+                                  mediaType: MediaType.video);
+                            } else {
+                              _sendMessage(text: _messageController.text);
+                            }
+                          },
+                        ),
+                      )
+                          : Container();
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
     );
   }
-}
+  }
 
-String _formatTimestamp(Timestamp timestamp) {
+
+        String _formatTimestamp(Timestamp timestamp) {
   DateTime dateTime = timestamp.toDate();
   return DateFormat('hh:mm a').format(dateTime); // Format time as hh:mm AM/PM
 }

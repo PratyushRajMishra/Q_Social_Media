@@ -84,7 +84,7 @@ class _MessagePageState extends State<MessagePage> {
                         Navigator.push(
                           context,
                           CupertinoPageRoute(
-                            builder: (context) => const MessageUserListPage(),
+                            builder: (context) => MessageUserListPage(postData: {},),
                           ),
                         );
                       },
@@ -197,7 +197,7 @@ class _MessagePageState extends State<MessagePage> {
                                   CupertinoPageRoute(
                                     builder: (context) => UserMessagePage(
                                       userId: userId,
-                                      userName: userName,
+                                      userName: userName, postData: {},
                                     ),
                                   ),
                                 );
@@ -252,7 +252,7 @@ class _MessagePageState extends State<MessagePage> {
                       Navigator.push(
                         context,
                         CupertinoPageRoute(
-                          builder: (context) => const MessageUserListPage(),
+                          builder: (context) => MessageUserListPage(postData: {},),
                         ),
                       );
                     },
@@ -430,7 +430,7 @@ class _MessagePageState extends State<MessagePage> {
                                   CupertinoPageRoute(
                                     builder: (context) => UserMessagePage(
                                       userId: userId,
-                                      userName: userName,
+                                      userName: userName, postData: {},
                                     ),
                                   ),
                                 );
@@ -499,7 +499,7 @@ class _MessagePageState extends State<MessagePage> {
                               CupertinoPageRoute(
                                 builder: (context) => UserMessagePage(
                                   userId: otherUserId,
-                                  userName: userName,
+                                  userName: userName, postData: {},
                                 ),
                               ),
                             );
